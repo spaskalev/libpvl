@@ -1,0 +1,23 @@
+Q: Can callbacks be called repeatedly ?
+A: Yes, callbacks can be called repeatedly.
+
+Q: What about partial reads - if changes are coming through the network for example
+A: I should look into it :) - same as partial writes ?
+
+The stats callback need a little bit of more work - how to report generic stats ?
+- ignore them for now (leak detection, mark count, coalesced)
+
+Set a partial write trigger - to allow for more predictability during network streaming
+
+It would be good to have some sort of logging :)
+
+api changes
+
+ - remove pvl_replay from public interface, provide it via a function pointer
+   to initialization code
+
+    this way caller code has more limited api surface - just mark, commit and rollback
+
+    alternatively, introduce a user-type and a ops-type
+
+sizeof variant with a number of marks - for vla/heap allocation ?
