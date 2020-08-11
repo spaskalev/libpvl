@@ -377,10 +377,6 @@ static int pvl_mark_compare(const void *a, const void *b) {
     return 0;
 }
 
-static int pvl_mark_reverse_compare(const void *a, const void *b) {
-    return pvl_mark_compare(b, a);
-}
-
 static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
     int coalesced = 0;
     qsort(pvl->marks, pvl->marks_index, sizeof(pvl_mark_t), pvl_mark_compare);
@@ -391,8 +387,7 @@ static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
                 // Coalesce overlapping or continuous marks
                 pvl->marks[i].length = pvl->marks[j].length;
                 // Clear the next mark
-                pvl->marks[j].start = NULL;
-                pvl->marks[j].length = 0;
+                pvl->marks[j] = (pvl_mark_t){0};
                 // Raise the flag
                 coalesced = 1;
             } else {
@@ -403,13 +398,18 @@ static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
     }
     if (coalesced) {
         // Put the cleared marks slots at the end
-        // OPT coalescing marks leaves the list sorted - shift empty marks is ~ linear
-        qsort(pvl->marks, pvl->marks_index, sizeof(pvl_mark_t), pvl_mark_reverse_compare);
-        for (size_t i = 0; i < pvl->marks_index; i++) {
-            if (pvl->marks[i].start == NULL) {
-                // Find the first one
-                pvl->marks_index = i;
-                break;
+        for(size_t i = 0; i < pvl->marks_index; i++) {
+            if (pvl->marks[i].start) {
+                continue;
+            }
+            pvl->marks_index = i;
+            for (size_t j = i+1; j < pvl->marks_index; j++) {
+                if (! pvl->marks[j].start) {
+                    continue;
+                }
+                pvl->marks[i] = pvl->marks[j];
+                pvl->marks[j] = (pvl_mark_t){0};
+                pvl->marks_index = j;
             }
         }
     }
