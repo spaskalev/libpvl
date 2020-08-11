@@ -10,6 +10,72 @@
 #define WARNING_DO_NOT_INCLUDE_PLV_C
 #include "pvl.c"
 
+int test_coalesce_no_marks() {
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
+    char main[1024];
+    pvl_t* pvl = pvl_init(pvlbuf, 1, main, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    int marks = pvl->marks_index;
+    int coalesced;
+    pvl_coalesce_marks(pvl, &coalesced);
+    assert(coalesced == 0);
+    assert(marks == pvl->marks_index);
+}
+
+int test_coalesce_one_mark() {
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
+    char main[1024];
+    pvl_t* pvl = pvl_init(pvlbuf, 1, main, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(0 == pvl_mark(pvl, main, 1));
+    int marks = pvl->marks_index;
+    int coalesced;
+    pvl_coalesce_marks(pvl, &coalesced);
+    assert(coalesced == 0);
+    assert(marks == pvl->marks_index);
+}
+
+int test_coalesce_many_marks() {
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(2)];
+    char main[1024];
+    pvl_t* pvl = pvl_init(pvlbuf, 2, main, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(0 == pvl_mark(pvl, main, 1));
+    assert(0 == pvl_mark(pvl, main+10, 1));
+    assert(2 == pvl->marks_index);
+    int coalesced;
+    pvl_coalesce_marks(pvl, &coalesced);
+    assert(coalesced == 0);
+    assert(2 == pvl->marks_index);
+}
+
+int test_coalesce_overlapping_marks() {
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(2)];
+    char main[1024];
+    pvl_t* pvl = pvl_init(pvlbuf, 2, main, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(0 == pvl_mark(pvl, main, 10));
+    assert(0 == pvl_mark(pvl, main+5, 15));
+    assert(2 == pvl->marks_index);
+    int coalesced;
+    pvl_coalesce_marks(pvl, &coalesced);
+    assert(coalesced == 1);
+    assert(1 == pvl->marks_index);
+    assert(pvl->marks[0].start == main);
+    assert(pvl->marks[0].length == 15);
+}
+
+int test_coalesce_continuous_marks() {
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(2)];
+    char main[1024];
+    pvl_t* pvl = pvl_init(pvlbuf, 2, main, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(0 == pvl_mark(pvl, main, 10));
+    assert(0 == pvl_mark(pvl, main+10, 20));
+    assert(2 == pvl->marks_index);
+    int coalesced;
+    pvl_coalesce_marks(pvl, &coalesced);
+    assert(coalesced == 1);
+    assert(1 == pvl->marks_index);
+    assert(pvl->marks[0].start == main);
+    assert(pvl->marks[0].length == 20);
+}
+
 int main() {
     //TODO
 
@@ -17,4 +83,11 @@ int main() {
     // partial saves
     // coalesced marks
 
+    test_coalesce_no_marks();
+    test_coalesce_one_mark();
+    test_coalesce_many_marks();
+    test_coalesce_overlapping_marks();
+    test_coalesce_continuous_marks();
+
+    // test_auto_coalesce upon mark limit
 }

@@ -32,8 +32,8 @@ typedef struct {
 } pvl_change_header_t;
 
 typedef struct {
-    // start
-    size_t length;
+    ptrdiff_t start;
+    size_t    length;
 } pvl_change_t;
 
 struct pvl_s {
@@ -77,10 +77,13 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
         return NULL;
     }
 
-    // Ensure we don't have garbage
-    memset(at, 0, pvl_sizeof_pvl_t(marks));
-
     pvl_t* pvl = (pvl_t*) at;
+
+    // Ensure we don't have garbage. The sizeof operator will not
+    // account for the flexible array at the end of the structure,
+    // call pvl_clear_marks to ensure it is also cleaned.
+    memset(pvl, 0, pvl_sizeof_pvl_t(marks));
+    pvl_clear_marks(pvl);
 
     if (marks == 0) {
         return NULL;
@@ -243,7 +246,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
         return 0;
     }
 
-    // Sort and merge overlapping and/or continuous marks
+    // Merge overlapping and/or continuous marks
     pvl_coalesce_marks(pvl, NULL);
 
     // Calculate the total size
@@ -282,6 +285,8 @@ static int pvl_save(pvl_t* pvl, int partial) {
     // Construct and save each change
     for (size_t i = 0; i < pvl->marks_index; i++) {
         pvl_change_t change = {0};
+        change.start = pvl->marks[i].start - pvl->main;
+        change.length = pvl->marks[i].length;
         write_count = fwrite(&change, sizeof(pvl_change_t), 1, file);
         if (write_count != 1) {
             return 1;
@@ -344,11 +349,7 @@ static int pvl_load(pvl_t* pvl, int initial) {
 }
 
 static void pvl_clear_marks(pvl_t* pvl) {
-    // OPT a memset might be faster :)
-    for (size_t i = 0; i < pvl->marks_count; i++) {
-        pvl->marks[i].start = NULL;
-        pvl->marks[i].length = 0;
-    }
+    memset(pvl->marks, 0, pvl->marks_count * sizeof(pvl_mark_t));
     pvl->marks_index = 0;
 }
 
@@ -381,11 +382,6 @@ static int pvl_mark_reverse_compare(const void *a, const void *b) {
 }
 
 static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
-    // this function should leave the marks sorted
-    // therefore a more appropriate name is in order
-    // probably something like pvl_tidy_marks or
-    // pvl_optimize_marks, pvl_organize_marks, etc
-    // tbd :)
     int coalesced = 0;
     qsort(pvl->marks, pvl->marks_index, sizeof(pvl_mark_t), pvl_mark_compare);
     for (size_t i = 0; i < pvl->marks_index;) {
@@ -412,7 +408,7 @@ static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
         for (size_t i = 0; i < pvl->marks_index; i++) {
             if (pvl->marks[i].start == NULL) {
                 // Find the first one
-                pvl->marks_index = i+1;
+                pvl->marks_index = i;
                 break;
             }
         }
