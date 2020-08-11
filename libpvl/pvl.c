@@ -16,7 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include "pvl.h"
 
 typedef struct {
@@ -25,8 +24,6 @@ typedef struct {
 } pvl_mark_t;
 
 typedef struct {
-    size_t id;
-    time_t time;
     int    partial;
     size_t change_count;
 } pvl_change_header_t;
@@ -153,8 +150,6 @@ int pvl_mark(pvl_t* pvl, char* start, size_t length) {
         pvl->marks_index++;
     } else {
         // Marks are full, need to coalesce them
-        // Different approaches are possible here - take a lazy one
-        // and improve later if needed. It is best to not do it at all.
         int coalesced = 0;
         pvl_coalesce_marks(pvl, &coalesced);
         if (coalesced) {
@@ -198,22 +193,18 @@ int pvl_rollback(pvl_t* pvl) {
     }
     if (pvl->mirror != NULL) {
         if (pvl->partial) {
-            // TODO
-            // knowledge of previous marks is lost - need to store a way that reverts them
-            // perhaps trigger a full snapshot store after restore from the mirror ?
-            //
-            // - or -
-            //
-            // do nothing - let the load code handle it, as it has to handle this case anyway
+            // Perform a full copy
             memcpy(pvl->main, pvl->mirror, pvl->length);
             pvl->partial = 0;
             pvl_clear_marks(pvl);
             return 0;
         } // else
         for (size_t i; i < pvl->marks_index; i++) {
-            // TODO for each mark - memcpy, clear mark
+            ptrdiff_t offset = pvl->marks[i].start - pvl->main;
+            memcpy(pvl->marks[i].start, pvl->mirror+offset, pvl->marks[i].length);
+            pvl->marks[i] = (pvl_mark_t){0};
         }
-        // TODO reset mark index
+        pvl->marks_index = 0;
         return 0;
     } // else
     pvl_clear_marks(pvl);
@@ -273,8 +264,6 @@ static int pvl_save(pvl_t* pvl, int partial) {
 
     // Construct and save the header
     pvl_change_header_t change_header = {0};
-    change_header.id = pvl->change_id;
-    change_header.time = time(NULL);
     change_header.partial = partial;
     change_header.change_count = pvl->marks_index;
     write_count = fwrite(&change_header, sizeof(pvl_change_header_t), 1, file);
@@ -308,6 +297,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
         } else {
             if (pvl->partial) {
                 pvl->partial = 0;
+                // Perform a full copy
                 memcpy(pvl->mirror, pvl->main, pvl->length);
             } else {
                 for (size_t i = 0; i < pvl->marks_index; i++) {
@@ -356,8 +346,6 @@ static void pvl_clear_marks(pvl_t* pvl) {
 static int pvl_mark_compare(const void *a, const void *b) {
     pvl_mark_t* mark_a = (pvl_mark_t*)a;
     pvl_mark_t* mark_b = (pvl_mark_t*)b;
-    // Be thorough - arithmetic operations on NULL are undefined,
-    // pointer arithmetic can overflow as pointers are unsigned.
     if ((!mark_a->start) && (!mark_b->start)) {
         return 0;
     }
