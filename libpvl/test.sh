@@ -14,7 +14,7 @@ LIB_STATIC="libpvl.a"
 
 IMPL_GUARD="WARNING_DO_NOT_INCLUDE_PLV_C"
 
-GC_OPTS="-g -fstrict-aliasing -Wall -D${IMPL_GUARD}"
+GC_OPTS="-g -fstrict-aliasing -Wall -Wextra -D${IMPL_GUARD}"
 
 # Clear
 rm -f "${TEST_BIN} ${LIB_OBJECT} ${LIB_SHARED} ${LIB_STATIC}"

@@ -227,7 +227,8 @@ int pvl_replay(pvl_t* pvl) {
 }
 
 static int pvl_save(pvl_t* pvl, int partial) {
-    if (pvl->leak_cb && pvl->mirror) {
+    // Perform leak detection if prereqs are met
+    if (pvl->leak_cb && pvl->mirror && !pvl->partial && !partial) {
         pvl_leak_detection(pvl);
     }
 
@@ -242,6 +243,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
         return 0;
     }
 
+    // Sort and merge overlapping and/or continuous marks
     pvl_coalesce_marks(pvl, NULL);
 
     // Calculate the total size
@@ -290,11 +292,26 @@ static int pvl_save(pvl_t* pvl, int partial) {
         }
     }
 
-    // leak detection
-    // apply to mirror
-    // if partial - don't apply to mirror but store a flag
-    // and re-image everything once the final save is done
-    // otherwise rollback won't be available
+    // Apply to mirror
+    // pvl not partial, flag not partial - apply changes
+    // pvl not partial, flag partial - set pvl to partial, do not apply
+    // pvl partial, flag partial - do not apply
+    // pvl partial, flag not partial - clear pvl, apply entire block
+    if (pvl->mirror) {
+        if (partial) {
+            pvl->partial = partial;
+        } else {
+            if (pvl->partial) {
+                pvl->partial = 0;
+                memcpy(pvl->mirror, pvl->main, pvl->length);
+            } else {
+                for (size_t i = 0; i < pvl->marks_index; i++) {
+                    ptrdiff_t offset = pvl->marks[i].start - pvl->main;
+                    memcpy(pvl->mirror+offset, pvl->marks[i].start, pvl->marks[i].length);
+                }
+            }
+        }
+    }
 
     // Signal that the save is done
     if (pvl->post_save_cb != NULL) {
