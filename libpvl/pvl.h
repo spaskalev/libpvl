@@ -45,8 +45,6 @@ size_t pvl_sizeof_pvl_t(size_t marks);
  * Passed parameters
  * - Initial flag (for initial loading and rollback when there is no mirror)
  * - Pointer to a FILE* - set to load changes from it using fread
- * - Pointer to a repeat flag - set if pvl should call the callback again
- *   for additional changes
  *
  * Returns
  * - Standard int behavior
@@ -55,9 +53,12 @@ typedef int (*pre_load_cb_t)(int initial, FILE** file, int* repeat);
 
 /*
  * Callback for acknowledging loaded changes
+ *
  * TODO
+ * - Pointer to a repeat flag - set if pvl should call the callback again
+ *   for additional changes
  */
-typedef int (*post_load_cb_t)(int initial, FILE** file, int* repeat);
+typedef int (*post_load_cb_t)(FILE* file, int status, long fpos, int* repeat);
 
 /*
  * Callback for preparing to persist changes

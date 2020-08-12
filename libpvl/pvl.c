@@ -7,7 +7,7 @@
  */
 
 #ifndef WARNING_DO_NOT_INCLUDE_PLV_C
-#error "Do not include pvl.c. Use the header and link to the shared object."
+#error "Do not include pvl.c. Use the header and link with object code."
 #endif
 
 #include <stdalign.h>
@@ -221,14 +221,14 @@ int pvl_replay(pvl_t* pvl) {
 }
 
 static int pvl_save(pvl_t* pvl, int partial) {
-    // Perform leak detection if prereqs are met
-    if (pvl->leak_cb && pvl->mirror && !pvl->partial && !partial) {
-        pvl_leak_detection(pvl);
-    }
-
     // Commit may still be called with no marks
     if (! pvl->marks_index) {
         return 0;
+    }
+
+    // Perform leak detection if prereqs are met
+    if (pvl->leak_cb && pvl->mirror && !pvl->partial && !partial) {
+        pvl_leak_detection(pvl);
     }
 
     // Early return if there is no save handler
@@ -252,7 +252,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
 
     FILE* file = NULL;
 
-    // Call save callback
+    // Call save callback to get save location
     (*pvl->pre_save_cb)(total, &file);
 
     // Fail if the callback did not provide a place to save
@@ -320,21 +320,93 @@ static int pvl_save(pvl_t* pvl, int partial) {
 }
 
 static int pvl_load(pvl_t* pvl, int initial) {
-    /*
-     *  Probably the most important issue at hand
-     * is how to recover from a failed or incomplete load.
-     * This is easy if a mirror is in use - just revert from it.
-     *
-     * However, if there is no mirror you have to reload
-     * all changes up to the current one - and then signal back
-     * to the application that the change won't do.
-     *
-     * If this is not okay perhaps some sort of a non-apply change
-     * saved would allow for a easier revert ?
-     *
-     * Or even allocate memory during change loading and free it
-     * afterwards - the horror :)
+    // Cannot load anything if there is no pre-load callback
+    if (! pvl->pre_load_cb) {
+        return 0;
+    }
+
+    // Do not perform any loads if there are pending marks
+    if (pvl->marks_index || pvl->partial) {
+        return 1;
+    }
+
+    FILE *file;
+    int repeat;
+
+    // Call the pre-load callback. Think about a trampoline vs goto here.
+    pre_load: (pvl->pre_load_cb)(initial, &file, &repeat);
+
+    if (!file) {
+        // Nothing to load
+        return 0;
+    }
+
+    // Try to load a change from it
+    pvl_change_header_t change_header = {0};
+    int read_count = 0;
+    long last_good_pos = 0;
+
+    last_good_pos = ftell(file);
+    read_count = fread(&change_header, sizeof(pvl_change_header_t), 1, file);
+    if (read_count != 1) {
+        // Couldn't load the change, signal the callback
+        (pvl->post_load_cb)(file, 1, last_good_pos, &repeat);
+        if (repeat) {
+            goto pre_load;
+        }
+        return 1;
+    }
+
+    /* Store the change - as a mark? and apply to mirror using the marks
+     * therefore avoiding allocation in load
+     * On further thought - why not merge both structures ?
+     * current marks store absolute locations
+     * on load we need to have a relative one to apply to the main
+     * save the absolute main in the change header ?
+     * and calculate the relative during application
+     * but what if the current pvl is initialized with less mark space than
+     * the marks in the change ?
      */
+
+    for (size_t i = 0; i < change_header.change_count; i++) {
+        pvl_change_t change = {0};
+        last_good_pos = ftell(file);
+        read_count = fread(&change, sizeof(pvl_change_t), 1, file);
+        if (read_count != 1) {
+            // Couldn't load the change, signal the callback
+            (pvl->post_load_cb)(file, 1, last_good_pos, &repeat);
+            if (repeat) {
+                goto pre_load;
+            }
+            return 1;
+        }
+        last_good_pos = ftell(file);
+        read_count = fread(pvl->main+change.start, change.length, 1, file);
+        if (read_count != 1) {
+            // Couldn't load the change, signal the callback
+            (pvl->post_load_cb)(file, 1, last_good_pos, &repeat);
+            if (repeat) {
+                goto pre_load;
+            }
+            return 1;
+        }
+        last_good_pos = ftell(file);
+    }
+
+    /*
+     * Apply it to the mirror
+     *
+     * Do not apply partial changes as a rollback might be required
+     */
+    if (pvl->mirror && !change_header.partial) {
+        memcpy(pvl->mirror, pvl->main, pvl->length);
+    }
+
+    // Report success  via the post-load callback
+    (pvl->post_load_cb)(file, 0, last_good_pos, &repeat);
+    if (repeat) {
+        goto pre_load;
+    }
     return 0;
 }
 
