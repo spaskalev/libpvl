@@ -397,7 +397,8 @@ static int pvl_load(pvl_t* pvl, int initial) {
     int repeat;
 
     // Call the pre-load callback. Think about a trampoline vs goto here.
-    pre_load: (pvl->pre_load_cb)(pvl, initial, &file, &repeat);
+    pre_load:
+    file = (pvl->pre_load_cb)(pvl, initial, NULL, 0);
 
     if (!file) {
         // Nothing to load

@@ -99,12 +99,12 @@ char* test_save_dynbuf = NULL;
 size_t test_save_dynlen = 0;
 FILE* test_save_dynfile = NULL;
 
-int test_save_pre_save_cb(pvl_t* pvl, size_t length, FILE** file) {
+FILE* test_save_pre_save_cb(pvl_t* pvl, int full, size_t length) {
     test_save_dynfile = open_memstream(&test_save_dynbuf, &test_save_dynlen);
-    *file = test_save_dynfile;
+    return test_save_dynfile;
 }
 
-int test_save_post_save_cb(pvl_t* pvl, size_t length, FILE* file) {
+int test_save_post_save_cb(pvl_t* pvl, int full, size_t length, FILE* file, int status) {
     fflush(file);
     assert(length == test_save_dynlen);
     fclose(test_save_dynfile);

@@ -64,12 +64,12 @@ typedef FILE* (*pre_load_cb_t)(pvl_t* pvl, int initial, FILE* req_from, long req
  *
  * pvl                - The pvl_t instance that is calling the callback.
  * file               - The FILE* that has been used to load a change from.
- * status             - Indicates a successful or failed load.
+ * status             - Flag that indicates a successful or failed load.
  * last_good          - Indicates the last good position on the file, if any.
  *
  * Returns
  *
- * int                - Indicates whether a load should be repeated.
+ * int                - Indicates whether change loading should continue.
  */
 typedef int (*post_load_cb_t)(pvl_t* pvl, FILE* file, int status, long fpos);
 
@@ -156,8 +156,8 @@ pvl_t* pvl_init(char *at, size_t marks,
 /*
  * Mark a span of memory for inclusion in the next commit.
  *
- * Make sure to call mark after the memory has been updated
- * as marks can trigger partial writes before commit is called.
+ * Make sure to call mark after the memory has been updated,
+ * as partial writes may occur before commit is called.
  */
 int pvl_mark(pvl_t* pvl, char* start, size_t length);
 
