@@ -308,10 +308,15 @@ static int pvl_save(pvl_t* pvl, int partial) {
         total += pvl->marks[i].length;
     }
 
-    FILE* file = NULL;
+    // Determine whether this is a full change
+    int full = 0;
+    if (total == pvl->length) {
+        full = 1;
+    }
 
-    // Call save callback to get save location
-    (*pvl->pre_save_cb)(pvl, total, &file);
+    // ` callback to get save location
+    FILE* file = NULL;
+    file = (*pvl->pre_save_cb)(pvl, full, total);
 
     // Fail if the callback did not provide a place to save
     if (file == NULL) {
@@ -368,7 +373,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
 
     // Signal that the save is done
     if (pvl->post_save_cb != NULL) {
-        int signal_result = pvl->post_save_cb(pvl, total, file);
+        int signal_result = pvl->post_save_cb(pvl, full, total, file, 1);
         if (signal_result) {
             return signal_result;
         }
@@ -408,7 +413,7 @@ static int pvl_load(pvl_t* pvl, int initial) {
     read_count = fread(&change_header, sizeof(pvl_change_header_t), 1, file);
     if (read_count != 1) {
         // Couldn't load the change, signal the callback
-        (pvl->post_load_cb)(pvl, file, 1, last_good_pos, &repeat);
+        repeat = (pvl->post_load_cb)(pvl, file, 1, last_good_pos);
         if (repeat) {
             goto pre_load;
         }
@@ -432,7 +437,7 @@ static int pvl_load(pvl_t* pvl, int initial) {
         read_count = fread(&change, sizeof(pvl_change_t), 1, file);
         if (read_count != 1) {
             // Couldn't load the change, signal the callback
-            (pvl->post_load_cb)(pvl, file, 1, last_good_pos, &repeat);
+            repeat = (pvl->post_load_cb)(pvl, file, 1, last_good_pos);
             if (repeat) {
                 goto pre_load;
             }
@@ -442,7 +447,7 @@ static int pvl_load(pvl_t* pvl, int initial) {
         read_count = fread(pvl->main+change.start, change.length, 1, file);
         if (read_count != 1) {
             // Couldn't load the change, signal the callback
-            (pvl->post_load_cb)(pvl, file, 1, last_good_pos, &repeat);
+            repeat = (pvl->post_load_cb)(pvl, file, 1, last_good_pos);
             if (repeat) {
                 goto pre_load;
             }
@@ -461,7 +466,7 @@ static int pvl_load(pvl_t* pvl, int initial) {
     }
 
     // Report success  via the post-load callback
-    (pvl->post_load_cb)(pvl, file, 0, last_good_pos, &repeat);
+    repeat = (pvl->post_load_cb)(pvl, file, 0, last_good_pos);
     if (repeat) {
         goto pre_load;
     }
