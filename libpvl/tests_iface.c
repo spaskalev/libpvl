@@ -83,7 +83,7 @@ int test_init_mirror_main_no_overlap() {
     assert(pvl != NULL);
 }
 
-void test_init_leak_no_mirror_leak_cb(void* start, size_t length) {
+void test_init_leak_no_mirror_leak_cb(pvl_t* pvl, void* start, size_t length) {
     // TODO set a flag, fail in the test if the flag is set
 }
 
@@ -99,12 +99,12 @@ char* test_save_dynbuf = NULL;
 size_t test_save_dynlen = 0;
 FILE* test_save_dynfile = NULL;
 
-int test_save_pre_save_cb(size_t length, FILE** file) {
+int test_save_pre_save_cb(pvl_t* pvl, size_t length, FILE** file) {
     test_save_dynfile = open_memstream(&test_save_dynbuf, &test_save_dynlen);
     *file = test_save_dynfile;
 }
 
-int test_save_post_save_cb(size_t length, FILE* file) {
+int test_save_post_save_cb(pvl_t* pvl, size_t length, FILE* file) {
     fflush(file);
     assert(length == test_save_dynlen);
     fclose(test_save_dynfile);

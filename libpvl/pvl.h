@@ -49,7 +49,7 @@ size_t pvl_sizeof_pvl_t(size_t marks);
  * Returns
  * - Standard int behavior
  */
-typedef int (*pre_load_cb_t)(int initial, FILE** file, int* repeat);
+typedef int (*pre_load_cb_t)(pvl_t* pvl, int initial, FILE** file, int* repeat);
 
 /*
  * Callback for acknowledging loaded changes
@@ -58,7 +58,7 @@ typedef int (*pre_load_cb_t)(int initial, FILE** file, int* repeat);
  * - Pointer to a repeat flag - set if pvl should call the callback again
  *   for additional changes
  */
-typedef int (*post_load_cb_t)(FILE* file, int status, long fpos, int* repeat);
+typedef int (*post_load_cb_t)(pvl_t* pvl, FILE* file, int status, long fpos, int* repeat);
 
 /*
  * Callback for preparing to persist changes
@@ -70,7 +70,7 @@ typedef int (*post_load_cb_t)(FILE* file, int status, long fpos, int* repeat);
  * Returns
  * - Standard int behavior
  */
-typedef int (*pre_save_cb_t)(size_t length, FILE** file);
+typedef int (*pre_save_cb_t)(pvl_t* pvl, size_t length, FILE** file);
 
 /*
  * Callback for acknowledging persisted changes.
@@ -85,7 +85,7 @@ typedef int (*pre_save_cb_t)(size_t length, FILE** file);
  * Returns
  * - Standard int behavior
  */
-typedef int (*post_save_cb_t)(size_t length, FILE* file);
+typedef int (*post_save_cb_t)(pvl_t* pvl, size_t length, FILE* file);
 
 /*
  * Callback for reporting leaks
@@ -97,7 +97,7 @@ typedef int (*post_save_cb_t)(size_t length, FILE* file);
  * Returns
  * - Nothing
  */
-typedef void (*leak_cb_t)(void* start, size_t length);
+typedef void (*leak_cb_t)(pvl_t* pvl, void* start, size_t length);
 
 /*
  * Initialize pvl_t at the provided location.
