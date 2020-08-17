@@ -129,6 +129,9 @@ pvl_t* pvl_init(char *at, size_t marks,
 
 /*
  * Mark a span of memory for inclusion in the next commit.
+ *
+ * Make sure to call mark after the memory has been updated
+ * as marks can trigger partial writes before commit is called.
  */
 int pvl_mark(pvl_t* pvl, char* start, size_t length);
 

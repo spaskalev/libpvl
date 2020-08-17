@@ -211,7 +211,6 @@ int pvl_rollback(pvl_t* pvl) {
     return pvl_load(pvl, 1);
 }
 
-
 static void pvl_clear_marks(pvl_t* pvl) {
     memset(pvl->marks, 0, pvl->marks_count * sizeof(pvl_mark_t));
     pvl->marks_index = 0;
@@ -293,7 +292,6 @@ static int pvl_save(pvl_t* pvl, int partial) {
 
     // Early return if there is no save handler
     if (pvl->pre_save_cb == NULL) {
-        pvl_clear_marks(pvl);
         return 0;
     }
 
