@@ -211,15 +211,6 @@ int pvl_rollback(pvl_t* pvl) {
     return pvl_load(pvl, 1);
 }
 
-int pvl_replay(pvl_t* pvl) {
-    if (pvl == NULL) {
-        return 1;
-    }
-
-    // Replay is a non-initial load
-    return pvl_load(pvl, 0);
-}
-
 static int pvl_save(pvl_t* pvl, int partial) {
     // Commit may still be called with no marks
     if (! pvl->marks_index) {

@@ -141,11 +141,3 @@ int pvl_commit(pvl_t* pvl);
  * be called with the initial flag raised.
  */
 int pvl_rollback(pvl_t* pvl);
-
-/*
- * Load a change through the load callback.
- *
- * Can also be useful when changes become available after initialization,
- * for example if streaming them over a network link for high availability.
- */
-int pvl_replay(pvl_t* pvl);
