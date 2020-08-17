@@ -211,6 +211,75 @@ int pvl_rollback(pvl_t* pvl) {
     return pvl_load(pvl, 1);
 }
 
+
+static void pvl_clear_marks(pvl_t* pvl) {
+    memset(pvl->marks, 0, pvl->marks_count * sizeof(pvl_mark_t));
+    pvl->marks_index = 0;
+}
+
+static int pvl_mark_compare(const void *a, const void *b) {
+    pvl_mark_t* mark_a = (pvl_mark_t*)a;
+    pvl_mark_t* mark_b = (pvl_mark_t*)b;
+    if ((!mark_a->start) && (!mark_b->start)) {
+        return 0;
+    }
+    if ((!mark_a->start) && (mark_b->start)) {
+        return -1;
+    }
+    if ((mark_a->start) && (!mark_b->start)) {
+        return 1;
+    }
+    if (mark_a->start > mark_b->start) {
+        return 1;
+    }
+    if (mark_a->start < mark_b->start) {
+        return -1;
+    }
+    // Equal start locations
+    return 0;
+}
+
+static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
+    int coalesced = 0;
+    qsort(pvl->marks, pvl->marks_index, sizeof(pvl_mark_t), pvl_mark_compare);
+    for (size_t i = 0; i < pvl->marks_index;) {
+        size_t j = i+1;
+        for (; j < pvl->marks_index; j++) {
+            if ((pvl->marks[i].start + pvl->marks[i].length) >= pvl->marks[j].start) {
+                // Coalesce overlapping or continuous marks
+                pvl->marks[i].length = pvl->marks[j].length;
+                // Clear the next mark
+                pvl->marks[j] = (pvl_mark_t){0};
+                // Raise the flag
+                coalesced = 1;
+            } else {
+                break;
+            }
+        }
+        i = j; // Advance
+    }
+    if (coalesced) {
+        // Put the cleared marks slots at the end
+        for(size_t i = 0; i < pvl->marks_index; i++) {
+            if (pvl->marks[i].start) {
+                continue;
+            }
+            pvl->marks_index = i;
+            for (size_t j = i+1; j < pvl->marks_index; j++) {
+                if (! pvl->marks[j].start) {
+                    continue;
+                }
+                pvl->marks[i] = pvl->marks[j];
+                pvl->marks[j] = (pvl_mark_t){0};
+                pvl->marks_index = j;
+            }
+        }
+    }
+    if (coalesced_flag != NULL) {
+        *coalesced_flag = coalesced;
+    }
+}
+
 static int pvl_save(pvl_t* pvl, int partial) {
     // Commit may still be called with no marks
     if (! pvl->marks_index) {
@@ -399,74 +468,6 @@ static int pvl_load(pvl_t* pvl, int initial) {
         goto pre_load;
     }
     return 0;
-}
-
-static void pvl_clear_marks(pvl_t* pvl) {
-    memset(pvl->marks, 0, pvl->marks_count * sizeof(pvl_mark_t));
-    pvl->marks_index = 0;
-}
-
-static int pvl_mark_compare(const void *a, const void *b) {
-    pvl_mark_t* mark_a = (pvl_mark_t*)a;
-    pvl_mark_t* mark_b = (pvl_mark_t*)b;
-    if ((!mark_a->start) && (!mark_b->start)) {
-        return 0;
-    }
-    if ((!mark_a->start) && (mark_b->start)) {
-        return -1;
-    }
-    if ((mark_a->start) && (!mark_b->start)) {
-        return 1;
-    }
-    if (mark_a->start > mark_b->start) {
-        return 1;
-    }
-    if (mark_a->start < mark_b->start) {
-        return -1;
-    }
-    // Equal start locations
-    return 0;
-}
-
-static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
-    int coalesced = 0;
-    qsort(pvl->marks, pvl->marks_index, sizeof(pvl_mark_t), pvl_mark_compare);
-    for (size_t i = 0; i < pvl->marks_index;) {
-        size_t j = i+1;
-        for (; j < pvl->marks_index; j++) {
-            if ((pvl->marks[i].start + pvl->marks[i].length) >= pvl->marks[j].start) {
-                // Coalesce overlapping or continuous marks
-                pvl->marks[i].length = pvl->marks[j].length;
-                // Clear the next mark
-                pvl->marks[j] = (pvl_mark_t){0};
-                // Raise the flag
-                coalesced = 1;
-            } else {
-                break;
-            }
-        }
-        i = j; // Advance
-    }
-    if (coalesced) {
-        // Put the cleared marks slots at the end
-        for(size_t i = 0; i < pvl->marks_index; i++) {
-            if (pvl->marks[i].start) {
-                continue;
-            }
-            pvl->marks_index = i;
-            for (size_t j = i+1; j < pvl->marks_index; j++) {
-                if (! pvl->marks[j].start) {
-                    continue;
-                }
-                pvl->marks[i] = pvl->marks[j];
-                pvl->marks[j] = (pvl_mark_t){0};
-                pvl->marks_index = j;
-            }
-        }
-    }
-    if (coalesced_flag != NULL) {
-        *coalesced_flag = coalesced;
-    }
 }
 
 static int pvl_leak_detection(pvl_t* pvl) {

@@ -93,11 +93,13 @@ typedef int (*post_save_cb_t)(pvl_t* pvl, size_t length, FILE* file);
  * Passed parameters
  * - Start location of the leaked area
  * - Length of the leaked area
+ * - Partial detection flag - leaks reported with the partial flag on may be
+ *                            false positives - not yet marked.
  *
  * Returns
  * - Nothing
  */
-typedef void (*leak_cb_t)(pvl_t* pvl, void* start, size_t length);
+typedef void (*leak_cb_t)(pvl_t* pvl, void* start, size_t length, int partial);
 
 /*
  * Initialize pvl_t at the provided location.

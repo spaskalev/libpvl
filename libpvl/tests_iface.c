@@ -83,7 +83,7 @@ int test_init_mirror_main_no_overlap() {
     assert(pvl != NULL);
 }
 
-void test_init_leak_no_mirror_leak_cb(pvl_t* pvl, void* start, size_t length) {
+void test_init_leak_no_mirror_leak_cb(pvl_t* pvl, void* start, size_t length, int partial) {
     // TODO set a flag, fail in the test if the flag is set
 }
 
