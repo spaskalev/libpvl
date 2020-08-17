@@ -279,26 +279,46 @@ static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
     }
 }
 
+/*
+ * Save the currently-marked memory content
+ */
 static int pvl_save(pvl_t* pvl, int partial) {
-    // Commit may still be called with no marks
+    /*
+     * Commit may still be called with no marks
+     */
     if (! pvl->marks_index) {
         return 0;
     }
 
-    // Perform leak detection if prereqs are met
-    if (pvl->leak_cb && pvl->mirror && !pvl->partial && !partial) {
+    /*
+     * Perform leak detection if prereqs are met.
+     *
+     * Leak detection is still possible with partial writes,
+     * although to avoid false positives a change should be
+     * marked as soon as it is made in memory, which may
+     * incur some performance overhead. Nevertheless,
+     * leak detection is primarily a debugging tool that
+     * can be useful even if it has certain deficiencies.
+     */
+    if (pvl->leak_cb && pvl->mirror) {
         pvl_leak_detection(pvl);
     }
 
-    // Early return if there is no save handler
+    /*
+     * Early return if there is no save handler
+     */
     if (pvl->pre_save_cb == NULL) {
         return 0;
     }
 
-    // Merge overlapping and/or continuous marks
+    /*
+     * Merge overlapping and/or continuous marks
+     */
     pvl_coalesce_marks(pvl, NULL);
 
-    // Calculate the total size
+    /*
+     * Calculate the total size of the change
+     */
     size_t total = sizeof(pvl_change_header_t);
     for (size_t i = 0; i < pvl->marks_index; i++) {
         if (pvl->marks[i].start == NULL) {
@@ -308,43 +328,65 @@ static int pvl_save(pvl_t* pvl, int partial) {
         total += pvl->marks[i].length;
     }
 
-    // Determine whether this is a full change
+    /*
+     * Determine whether this is a full change
+     */
     int full = 0;
     if (total == pvl->length) {
         full = 1;
     }
 
-    // ` callback to get save location
+    /*
+     * Get the save destination through the pre-save callback
+     */
     FILE* file = NULL;
     file = (*pvl->pre_save_cb)(pvl, full, total);
 
-    // Fail if the callback did not provide a place to save
+    /*
+     * Fail if the callback did not provide a place to save
+     */
     if (file == NULL) {
+        if (pvl->post_save_cb != NULL) {
+            (pvl->post_save_cb)(pvl, full, total, file, 0);
+        }
         return 1;
     }
 
     size_t write_count = 0;
 
-    // Construct and save the header
+    /*
+     * Construct and save the header
+     */
     pvl_change_header_t change_header = {0};
     change_header.partial = partial;
     change_header.change_count = pvl->marks_index;
     write_count = fwrite(&change_header, sizeof(pvl_change_header_t), 1, file);
     if (write_count != 1) {
+        if (pvl->post_save_cb != NULL) {
+            (pvl->post_save_cb)(pvl, full, total, file, 0);
+        }
         return 1;
     }
 
-    // Construct and save each change
+    /*
+     * Construct and save each change
+     */
     for (size_t i = 0; i < pvl->marks_index; i++) {
         pvl_change_t change = {0};
         change.start = pvl->marks[i].start - pvl->main;
         change.length = pvl->marks[i].length;
         write_count = fwrite(&change, sizeof(pvl_change_t), 1, file);
         if (write_count != 1) {
+            if (pvl->post_save_cb != NULL) {
+                (pvl->post_save_cb)(pvl, full, total, file, 0);
+            }
             return 1;
         }
         write_count = fwrite(pvl->marks[i].start, pvl->marks[i].length, 1, file);
         if (write_count != 1) {
+            if (pvl->post_save_cb != NULL) {
+                (pvl->post_save_cb)(pvl, full, total, file, 0);
+            }
             return 1;
         }
     }
@@ -373,10 +415,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
 
     // Signal that the save is done
     if (pvl->post_save_cb != NULL) {
-        int signal_result = pvl->post_save_cb(pvl, full, total, file, 1);
-        if (signal_result) {
-            return signal_result;
-        }
+        (pvl->post_save_cb)(pvl, full, total, file, 1);
     }
 
     return 0;
