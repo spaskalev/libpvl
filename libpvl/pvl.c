@@ -290,6 +290,11 @@ static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
 }
 
 static int pvl_default_post_save(pvl_t* pvl, int full, size_t length, FILE* file, int failed) {
+    (void)(pvl);
+    (void)(full);
+    (void)(length);
+    (void)(file);
+    (void)(failed);
     /*
      * Empty
      */
@@ -526,5 +531,6 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* req_from, long req_pos) {
 
 static int pvl_leak_detection(pvl_t* pvl) {
     // TODO :)
+    (void)(pvl);
     return 0;
 }

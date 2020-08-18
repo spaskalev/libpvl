@@ -14,21 +14,24 @@ LIB_STATIC="libpvl.a"
 
 IMPL_GUARD="WARNING_DO_NOT_INCLUDE_PLV_C"
 
-GC_OPTS="-g -fstrict-aliasing -Wall -Wextra -D${IMPL_GUARD}"
+GC_BASE_OPTS="-g -fstrict-aliasing -Wall -Wextra"
+
+GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD}"
+GC_TEST_OPTS="${GC_BASE_OPTS}"
 
 # Clear
 rm -f "${TEST_BIN} ${LIB_OBJECT} ${LIB_SHARED} ${LIB_STATIC}"
 
 # Compile and link the lib (shared)
-gcc ${GC_OPTS} -c -fpic ${LIB_SRC} -o ${LIB_OBJECT}
+gcc ${GC_LIB_OPTS} -c -fpic ${LIB_SRC} -o ${LIB_OBJECT}
 gcc -shared ${LIB_OBJECT} -o ${LIB_SHARED}
 
 # Compile and archive the lib (static)
-gcc ${GC_OPTS} -c ${LIB_SRC} -o ${LIB_OBJECT}
+gcc ${GC_LIB_OPTS} -c ${LIB_SRC} -o ${LIB_OBJECT}
 ar rcs ${LIB_STATIC} ${LIB_OBJECT}
 
 # Compile and run the iface tests (shared)
-gcc -g -L. -lpvl ${TEST_SRC_IFACE} -o ${TEST_BIN}
+gcc ${GC_TEST_OPTS} -L. -lpvl ${TEST_SRC_IFACE} -o ${TEST_BIN}
 LD_LIBRARY_PATH=".:${LD_LIBRARY_PATH}" ./${TEST_BIN}
 
 # Compile and run the iface tests (static)
