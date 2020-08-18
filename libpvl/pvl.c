@@ -331,10 +331,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
     /*
      * Determine whether this is a full change
      */
-    int full = 0;
-    if (total == pvl->length) {
-        full = 1;
-    }
+    int full = (total == pvl->length);
 
     /*
      * Get the save destination through the pre-save callback
@@ -391,11 +388,14 @@ static int pvl_save(pvl_t* pvl, int partial) {
         }
     }
 
-    // Apply to mirror
-    // pvl not partial, flag not partial - apply changes
-    // pvl not partial, flag partial - set pvl to partial, do not apply
-    // pvl partial, flag partial - do not apply
-    // pvl partial, flag not partial - clear pvl, apply entire block
+    /*
+     * Apply to mirror
+     *
+     * pvl not partial, flag not partial - apply changes
+     * pvl not partial, flag partial - set pvl to partial, do not apply
+     * pvl partial, flag partial - do not apply
+     * pvl partial, flag not partial - clear pvl, apply entire block
+     */
     if (pvl->mirror) {
         if (partial) {
             pvl->partial = partial;
@@ -413,7 +413,9 @@ static int pvl_save(pvl_t* pvl, int partial) {
         }
     }
 
-    // Signal that the save is done
+    /*
+     * Signal that the save is done
+     */
     if (pvl->post_save_cb != NULL) {
         (pvl->post_save_cb)(pvl, full, total, file, 1);
     }
@@ -422,95 +424,85 @@ static int pvl_save(pvl_t* pvl, int partial) {
 }
 
 static int pvl_load(pvl_t* pvl, int initial) {
-    // Cannot load anything if there is no pre-load callback
+    /*
+     * Cannot load anything if there is no pre-load callback
+     */
     if (! pvl->pre_load_cb) {
         return 0;
     }
 
-    // Do not perform any loads if there are pending marks
+    /*
+     * Do not perform any loads if there are pending marks
+     */
     if (pvl->marks_index || pvl->partial) {
         return 1;
     }
 
     FILE *file;
-    int repeat;
 
-    // Call the pre-load callback. Think about a trampoline vs goto here.
-    pre_load:
-    file = (pvl->pre_load_cb)(pvl, initial, NULL, 0);
+    while (1) {
+        /*
+         * Call the pre-load callback.
+         */
+        file = (pvl->pre_load_cb)(pvl, initial, NULL, 0);
 
-    if (!file) {
-        // Nothing to load
+        if (!file) {
+            // Nothing to load
+            return 0;
+        }
+
+        /*
+         * Try to load a change from it
+         */
+        pvl_change_header_t change_header = {0};
+        long last_good_pos = ftell(file);
+
+        if (fread(&change_header, sizeof(pvl_change_header_t), 1, file) != 1) {
+            // Couldn't load the change, signal the callback
+            if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
+                continue;
+            }
+            return 1;
+        }
+
+        /*
+         * Read each mark header and content
+         */
+        for (size_t i = 0; i < change_header.change_count; i++) {
+            pvl_change_t change = {0};
+            if (fread(&change, sizeof(pvl_change_t), 1, file) != 1) {
+                // Couldn't load the change, signal the callback
+                if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
+                    continue;
+                }
+                return 1;
+            }
+            if (fread(pvl->main+change.start, change.length, 1, file) != 1) {
+                // Couldn't load the change, signal the callback
+                if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
+                    continue;
+                }
+                return 1;
+            }
+        }
+
+        last_good_pos = ftell(file);
+
+        /*
+         * Apply it to the mirror
+         *
+         * Do not apply partial changes as the load may fail later on
+         */
+        if (pvl->mirror && !change_header.partial) {
+            memcpy(pvl->mirror, pvl->main, pvl->length);
+        }
+
+        // Report success  via the post-load callback
+        if ((pvl->post_load_cb)(pvl, file, 0, last_good_pos)) {
+            continue;
+        }
         return 0;
     }
-
-    // Try to load a change from it
-    pvl_change_header_t change_header = {0};
-    int read_count = 0;
-    long last_good_pos = 0;
-
-    last_good_pos = ftell(file);
-    read_count = fread(&change_header, sizeof(pvl_change_header_t), 1, file);
-    if (read_count != 1) {
-        // Couldn't load the change, signal the callback
-        repeat = (pvl->post_load_cb)(pvl, file, 1, last_good_pos);
-        if (repeat) {
-            goto pre_load;
-        }
-        return 1;
-    }
-
-    /* Store the change - as a mark? and apply to mirror using the marks
-     * therefore avoiding allocation in load
-     * On further thought - why not merge both structures ?
-     * current marks store absolute locations
-     * on load we need to have a relative one to apply to the main
-     * save the absolute main in the change header ?
-     * and calculate the relative during application
-     * but what if the current pvl is initialized with less mark space than
-     * the marks in the change ?
-     */
-
-    for (size_t i = 0; i < change_header.change_count; i++) {
-        pvl_change_t change = {0};
-        last_good_pos = ftell(file);
-        read_count = fread(&change, sizeof(pvl_change_t), 1, file);
-        if (read_count != 1) {
-            // Couldn't load the change, signal the callback
-            repeat = (pvl->post_load_cb)(pvl, file, 1, last_good_pos);
-            if (repeat) {
-                goto pre_load;
-            }
-            return 1;
-        }
-        last_good_pos = ftell(file);
-        read_count = fread(pvl->main+change.start, change.length, 1, file);
-        if (read_count != 1) {
-            // Couldn't load the change, signal the callback
-            repeat = (pvl->post_load_cb)(pvl, file, 1, last_good_pos);
-            if (repeat) {
-                goto pre_load;
-            }
-            return 1;
-        }
-        last_good_pos = ftell(file);
-    }
-
-    /*
-     * Apply it to the mirror
-     *
-     * Do not apply partial changes as a rollback might be required
-     */
-    if (pvl->mirror && !change_header.partial) {
-        memcpy(pvl->mirror, pvl->main, pvl->length);
-    }
-
-    // Report success  via the post-load callback
-    repeat = (pvl->post_load_cb)(pvl, file, 0, last_good_pos);
-    if (repeat) {
-        goto pre_load;
-    }
-    return 0;
 }
 
 static int pvl_leak_detection(pvl_t* pvl) {
