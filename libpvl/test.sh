@@ -17,10 +17,10 @@ IMPL_GUARD="WARNING_DO_NOT_INCLUDE_PLV_C"
 GC_BASE_OPTS="-g -fstrict-aliasing -Wall -Wextra"
 
 GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD}"
-GC_TEST_OPTS="${GC_BASE_OPTS}"
+GC_TEST_OPTS="${GC_BASE_OPTS} -fprofile-arcs -ftest-coverage -lgcov --coverage"
 
 # Clear
-rm -f "${TEST_BIN} ${LIB_OBJECT} ${LIB_SHARED} ${LIB_STATIC}"
+rm -f "${TEST_BIN} ${LIB_OBJECT} ${LIB_SHARED} ${LIB_STATIC}" *.gcda *.gcno
 
 # Compile and link the lib (shared)
 gcc ${GC_LIB_OPTS} -c -fpic ${LIB_SRC} -o ${LIB_OBJECT}
@@ -35,13 +35,13 @@ gcc ${GC_TEST_OPTS} -L. -lpvl ${TEST_SRC_IFACE} -o ${TEST_BIN}
 LD_LIBRARY_PATH=".:${LD_LIBRARY_PATH}" ./${TEST_BIN}
 
 # Compile and run the iface tests (static)
-gcc -static -g ${TEST_SRC_IFACE} ${LIB_STATIC} -o ${TEST_BIN}
+gcc -static ${GC_TEST_OPTS} ${TEST_SRC_IFACE} ${LIB_STATIC} -o ${TEST_BIN}
 ./${TEST_BIN}
 
 # Compile and run the impl tests (shared)
-gcc -g -L. -lpvl ${TEST_SRC_IMPL} -o ${TEST_BIN}
+gcc ${GC_TEST_OPTS} -L. -lpvl ${TEST_SRC_IMPL} -o ${TEST_BIN}
 LD_LIBRARY_PATH=".:${LD_LIBRARY_PATH}" ./${TEST_BIN}
 
 # Compile and run the impl tests (static)
-gcc -static -g ${TEST_SRC_IMPL} ${LIB_STATIC} -o ${TEST_BIN}
+gcc -static ${GC_TEST_OPTS} ${TEST_SRC_IMPL} ${LIB_STATIC} -o ${TEST_BIN}
 ./${TEST_BIN}
