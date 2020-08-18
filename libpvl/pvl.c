@@ -344,12 +344,10 @@ static int pvl_save(pvl_t* pvl, int partial) {
      */
     if (file == NULL) {
         if (pvl->post_save_cb != NULL) {
-            (pvl->post_save_cb)(pvl, full, total, file, 0);
+            (pvl->post_save_cb)(pvl, full, total, file, 1);
         }
         return 1;
     }
-
-    size_t write_count = 0;
 
     /*
      * Construct and save the header
@@ -357,10 +355,9 @@ static int pvl_save(pvl_t* pvl, int partial) {
     pvl_change_header_t change_header = {0};
     change_header.partial = partial;
     change_header.change_count = pvl->marks_index;
-    write_count = fwrite(&change_header, sizeof(pvl_change_header_t), 1, file);
-    if (write_count != 1) {
+    if (fwrite(&change_header, sizeof(pvl_change_header_t), 1, file) != 1) {
         if (pvl->post_save_cb != NULL) {
-            (pvl->post_save_cb)(pvl, full, total, file, 0);
+            (pvl->post_save_cb)(pvl, full, total, file, 1);
         }
         return 1;
     }
@@ -372,20 +369,28 @@ static int pvl_save(pvl_t* pvl, int partial) {
         pvl_change_t change = {0};
         change.start = pvl->marks[i].start - pvl->main;
         change.length = pvl->marks[i].length;
-        write_count = fwrite(&change, sizeof(pvl_change_t), 1, file);
-        if (write_count != 1) {
+        if (fwrite(&change, sizeof(pvl_change_t), 1, file) != 1) {
             if (pvl->post_save_cb != NULL) {
-                (pvl->post_save_cb)(pvl, full, total, file, 0);
+                (pvl->post_save_cb)(pvl, full, total, file, 1);
             }
             return 1;
         }
-        write_count = fwrite(pvl->marks[i].start, pvl->marks[i].length, 1, file);
-        if (write_count != 1) {
+        if (fwrite(pvl->marks[i].start, pvl->marks[i].length, 1, file) != 1) {
             if (pvl->post_save_cb != NULL) {
-                (pvl->post_save_cb)(pvl, full, total, file, 0);
+                (pvl->post_save_cb)(pvl, full, total, file, 1);
             }
             return 1;
         }
+    }
+
+    /*
+     * Flush, as buffered data may otherwise be lost
+     */
+    if (fflush(file)) {
+        if (pvl->post_save_cb != NULL) {
+            (pvl->post_save_cb)(pvl, full, total, file, 1);
+        }
+        return 1;
     }
 
     /*
@@ -417,7 +422,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
      * Signal that the save is done
      */
     if (pvl->post_save_cb != NULL) {
-        (pvl->post_save_cb)(pvl, full, total, file, 1);
+        (pvl->post_save_cb)(pvl, full, total, file, 0);
     }
 
     return 0;

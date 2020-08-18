@@ -64,14 +64,14 @@ typedef FILE* (*pre_load_cb_t)(pvl_t* pvl, int initial, FILE* req_from, long req
  *
  * pvl                - The pvl_t instance that is calling the callback.
  * file               - The FILE* that has been used to load a change from.
- * status             - Flag that indicates a successful or failed load.
+ * failed             - Flag that indicates a successful or failed load.
  * last_good          - Indicates the last good position on the file, if any.
  *
  * Returns
  *
  * int                - Indicates whether change loading should continue.
  */
-typedef int (*post_load_cb_t)(pvl_t* pvl, FILE* file, int status, long fpos);
+typedef int (*post_load_cb_t)(pvl_t* pvl, FILE* file, int failed, long fpos);
 
 /*
  * Callback for preparing to persist a change
@@ -98,13 +98,13 @@ typedef FILE* (*pre_save_cb_t)(pvl_t* pvl, int full, size_t length);
  * full               - Indicates whether this is a full change.
  * length             - Indicates the length of the persisted change.
  * file               - The FILE* where the change was persisted to.
- * status             - Whether the change was persisted successfully.
+ * failed             - Whether the change was persisted successfully.
  *
  * Returns
  *
  * TODO full save request ? repeat request
  */
-typedef int (*post_save_cb_t)(pvl_t* pvl, int full, size_t length, FILE* file, int status);
+typedef int (*post_save_cb_t)(pvl_t* pvl, int full, size_t length, FILE* file, int failed);
 
 /*
  * Callback for reporting leaks
