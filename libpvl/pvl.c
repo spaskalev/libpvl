@@ -58,6 +58,7 @@ static int pvl_save(pvl_t* pvl, int partial);
 static void pvl_clear_marks(pvl_t* pvl);
 static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag);
 static int pvl_leak_detection(pvl_t* pvl);
+static int pvl_default_post_save(pvl_t* pvl, int full, size_t length, FILE* file, int failed);
 
 pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
     pre_load_cb_t pre_load_cb, post_load_cb_t post_load_cb,
@@ -118,9 +119,17 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
         }
     }
 
-    // A load-only (e.g. replicating) pvl might have no save callback.
-    pvl->pre_save_cb = pre_save_cb;
-    pvl->post_save_cb = post_save_cb;
+    /*
+     * A load-only (e.g. replicating) pvl might have no save callback.
+     */
+    if (pre_save_cb) {
+        pvl->pre_save_cb = pre_save_cb;
+        if (post_save_cb) {
+            pvl->post_save_cb = post_save_cb;
+        } else {
+            pvl->post_save_cb = pvl_default_post_save;
+        }
+    }
 
     // The leak detection is optional and will be checked upon use.
     pvl->leak_cb = leak_cb;
@@ -279,6 +288,13 @@ static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
     }
 }
 
+static int pvl_default_post_save(pvl_t* pvl, int full, size_t length, FILE* file, int failed) {
+    /*
+     * Empty
+     */
+    return 0;
+}
+
 /*
  * Save the currently-marked memory content
  */
@@ -343,9 +359,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
      * Fail if the callback did not provide a place to save
      */
     if (file == NULL) {
-        if (pvl->post_save_cb != NULL) {
-            (pvl->post_save_cb)(pvl, full, total, file, 1);
-        }
+        (pvl->post_save_cb)(pvl, full, total, file, 1);
         return 1;
     }
 
@@ -356,9 +370,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
     change_header.partial = partial;
     change_header.change_count = pvl->marks_index;
     if (fwrite(&change_header, sizeof(pvl_change_header_t), 1, file) != 1) {
-        if (pvl->post_save_cb != NULL) {
-            (pvl->post_save_cb)(pvl, full, total, file, 1);
-        }
+        (pvl->post_save_cb)(pvl, full, total, file, 1);
         return 1;
     }
 
@@ -370,15 +382,11 @@ static int pvl_save(pvl_t* pvl, int partial) {
         change.start = pvl->marks[i].start - pvl->main;
         change.length = pvl->marks[i].length;
         if (fwrite(&change, sizeof(pvl_change_t), 1, file) != 1) {
-            if (pvl->post_save_cb != NULL) {
-                (pvl->post_save_cb)(pvl, full, total, file, 1);
-            }
+            (pvl->post_save_cb)(pvl, full, total, file, 1);
             return 1;
         }
         if (fwrite(pvl->marks[i].start, pvl->marks[i].length, 1, file) != 1) {
-            if (pvl->post_save_cb != NULL) {
-                (pvl->post_save_cb)(pvl, full, total, file, 1);
-            }
+            (pvl->post_save_cb)(pvl, full, total, file, 1);
             return 1;
         }
     }
@@ -387,9 +395,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
      * Flush, as buffered data may otherwise be lost
      */
     if (fflush(file)) {
-        if (pvl->post_save_cb != NULL) {
-            (pvl->post_save_cb)(pvl, full, total, file, 1);
-        }
+        (pvl->post_save_cb)(pvl, full, total, file, 1);
         return 1;
     }
 
