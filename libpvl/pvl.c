@@ -43,7 +43,8 @@ struct pvl_s {
     post_save_cb_t post_save_cb;
     leak_cb_t      leak_cb;
     int            partial;
-    size_t         change_id;
+    FILE*          last_save_file;
+    long           last_save_pos;
     size_t         marks_index;
     size_t         marks_count;
     pvl_mark_t     marks[];
@@ -53,7 +54,7 @@ size_t pvl_sizeof_pvl_t(size_t marks) {
     return sizeof(struct pvl_s)+(marks * sizeof(pvl_mark_t));
 }
 
-static int pvl_load(pvl_t* pvl, int initial);
+static int pvl_load(pvl_t* pvl, int initial, FILE* req_from, long req_pos);
 static int pvl_save(pvl_t* pvl, int partial);
 static void pvl_clear_marks(pvl_t* pvl);
 static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag);
@@ -112,7 +113,7 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
     // Perform initial loading if a load callback is available
     if (pre_load_cb != NULL) {
         pvl->pre_load_cb = pre_load_cb;
-        int load_result = pvl_load(pvl, 1);
+        int load_result = pvl_load(pvl, 1, NULL, 0);
         // TODO handle
         if (load_result != 0) {
             return NULL;
@@ -217,7 +218,7 @@ int pvl_rollback(pvl_t* pvl) {
         return 0;
     } // else
     pvl_clear_marks(pvl);
-    return pvl_load(pvl, 1);
+    return pvl_load(pvl, 1, pvl->last_save_file, pvl->last_save_pos);
 }
 
 static void pvl_clear_marks(pvl_t* pvl) {
@@ -424,6 +425,12 @@ static int pvl_save(pvl_t* pvl, int partial) {
         }
     }
 
+    // Store the last complete save info in the pvl
+    if (!partial) {
+        pvl->last_save_file = file;
+        pvl->last_save_pos = ftell(file);
+    }
+
     /*
      * Signal that the save is done
      */
@@ -434,7 +441,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
     return 0;
 }
 
-static int pvl_load(pvl_t* pvl, int initial) {
+static int pvl_load(pvl_t* pvl, int initial, FILE* req_from, long req_pos) {
     /*
      * Cannot load anything if there is no pre-load callback
      */
@@ -450,12 +457,13 @@ static int pvl_load(pvl_t* pvl, int initial) {
     }
 
     FILE *file;
+    long last_good_pos = 0;
 
     while (1) {
         /*
          * Call the pre-load callback.
          */
-        file = (pvl->pre_load_cb)(pvl, initial, NULL, 0);
+        file = (pvl->pre_load_cb)(pvl, initial, req_from, req_pos);
 
         if (!file) {
             // Nothing to load
@@ -466,7 +474,7 @@ static int pvl_load(pvl_t* pvl, int initial) {
          * Try to load a change from it
          */
         pvl_change_header_t change_header = {0};
-        long last_good_pos = ftell(file);
+        last_good_pos = ftell(file);
 
         if (fread(&change_header, sizeof(pvl_change_header_t), 1, file) != 1) {
             // Couldn't load the change, signal the callback
