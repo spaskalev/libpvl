@@ -78,25 +78,39 @@ function __test_static() {
     done
 }
 
-function __test() {
-    OPTS="-Og -O0 -O1 -O2 -O3 -Os"
+function __test_debug() {
+    GC_OPT_LEVEL="-Og"
+    GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD}"
+    GC_TEST_OPTS="${GC_BASE_OPTS}"
+    __test_shared $@
+    __test_static $@
+}
+
+function __test_coverage() {
+    GC_OPT_LEVEL="-O0"
+    GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD} --coverage"
+    GC_TEST_OPTS="${GC_BASE_OPTS} --coverage"
+    __test_shared $@
+    __coverage
+    __test_static $@
+    __coverage
+}
+
+function __test_optlevels() {
+    OPTS="-O0 -O1 -O2 -O3 -Os"
     for opt in $OPTS; do
         GC_OPT_LEVEL=${opt}
         GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD}"
         GC_TEST_OPTS="${GC_BASE_OPTS}"
-        if [ "-O0" == "${opt}" ]; then
-            GC_LIB_OPTS="${GC_LIB_OPTS} --coverage"
-            GC_TEST_OPTS="${GC_TEST_OPTS} --coverage"
-        fi
         __test_shared $@
-        if [ "-O0" == "${opt}" ]; then
-            __coverage
-        fi
         __test_static $@
-        if [ "-O0" == "${opt}" ]; then
-            __coverage
-        fi
     done
+}
+
+function __test() {
+    __test_debug $@
+    __test_coverage $@
+    __test_optlevels $@
 }
 
 __test ${TEST_SRC_IFACE} ${TEST_SRC_IMPL}
