@@ -52,5 +52,6 @@ Mkfile.old
 dkms.conf
 
 # gcov data
+*.gcov
 *.gcda
 *.gcno
