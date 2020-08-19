@@ -20,8 +20,6 @@ IMPL_GUARD="WARNING_DO_NOT_INCLUDE_PLV_C"
 CC="gcc"
 
 GC_BASE_OPTS="-g -fstrict-aliasing -pedantic -Wall -Wextra"
-GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD} --coverage"
-GC_TEST_OPTS="${GC_BASE_OPTS} --coverage"
 
 trap 'on_err' ERR
 
@@ -54,14 +52,10 @@ function __compile_and_run_static_test() {
 }
 
 function __coverage() {
-	if [ "${GC_OPT_LEVEL}" != "-O0" ]; then
-		echo "Skipping coverage for optimization level ${GC_OPT_LEVEL}"
-		return 0
-	fi
-	if [ "${CC}" != "gcc" ]; then
-		echo "Skipping coverage for compiler ${CC}"
-		return 0
-	fi
+    if [ "${CC}" != "gcc" ]; then
+        echo "Skipping coverage for compiler ${CC}"
+        return 0
+    fi
     gcovr --fail-under-line ${LINE_COV}
     gcovr --branches --fail-under-branch ${BRANCH_COV}
 }
@@ -73,7 +67,6 @@ function __test_shared() {
         __compile_and_run_shared_test ${1}
         shift
     done
-    __coverage
 }
 
 function __test_static() {
@@ -83,16 +76,27 @@ function __test_static() {
         __compile_and_run_static_test ${1}
         shift
     done
-    __coverage
 }
 
 function __test() {
-    __test_shared $@
-    __test_static $@
+    OPTS="-Og -O0 -O1 -O2 -O3 -Os"
+    for opt in $OPTS; do
+        GC_OPT_LEVEL=${opt}
+        GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD}"
+        GC_TEST_OPTS="${GC_BASE_OPTS}"
+        if [ "-O0" == "${opt}" ]; then
+            GC_LIB_OPTS="${GC_LIB_OPTS} --coverage"
+            GC_TEST_OPTS="${GC_TEST_OPTS} --coverage"
+        fi
+        __test_shared $@
+        if [ "-O0" == "${opt}" ]; then
+            __coverage
+        fi
+        __test_static $@
+        if [ "-O0" == "${opt}" ]; then
+            __coverage
+        fi
+    done
 }
 
-OPTS="-Og -O0 -O1 -O2 -O3 -Os"
-for opt in $OPTS; do
-	GC_OPT_LEVEL=${opt}
-	__test ${TEST_SRC_IFACE} ${TEST_SRC_IMPL}
-done
+__test ${TEST_SRC_IFACE} ${TEST_SRC_IMPL}
