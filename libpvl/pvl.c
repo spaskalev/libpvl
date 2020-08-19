@@ -209,7 +209,7 @@ int pvl_rollback(pvl_t* pvl) {
             pvl_clear_marks(pvl);
             return 0;
         } // else
-        for (size_t i; i < pvl->marks_index; i++) {
+        for (size_t i = 0; i < pvl->marks_index; i++) {
             ptrdiff_t offset = pvl->marks[i].start - pvl->main;
             memcpy(pvl->marks[i].start, pvl->mirror+offset, pvl->marks[i].length);
             pvl->marks[i] = (pvl_mark_t){0};
