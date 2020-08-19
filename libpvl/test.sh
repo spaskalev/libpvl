@@ -39,6 +39,9 @@ function __compile_shared_lib() {
 function __compile_and_run_shared_test() {
     ${CC} ${GC_OPT_LEVEL} ${GC_TEST_OPTS} -L. -lpvl ${1} -o ${TEST_BIN}
     LD_LIBRARY_PATH=".:${LD_LIBRARY_PATH}" ./${TEST_BIN}
+    LD_LIBRARY_PATH=".:${LD_LIBRARY_PATH}" \
+        valgrind --error-exitcode=1 --exit-on-first-error=yes --track-origins=yes \
+        ./${TEST_BIN}
 }
 
 function __compile_static_lib() {
@@ -49,6 +52,7 @@ function __compile_static_lib() {
 function __compile_and_run_static_test() {
     ${CC} -static ${GC_OPT_LEVEL} ${GC_TEST_OPTS} ${1} ${LIB_STATIC} -o ${TEST_BIN}
     ./${TEST_BIN}
+    # static runs fail on valgrind with libc issues, fun
 }
 
 function __coverage() {
