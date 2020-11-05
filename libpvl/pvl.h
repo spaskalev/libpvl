@@ -154,7 +154,7 @@ pvl_t* pvl_init(char *at, size_t marks,
     leak_cb_t leak_cb);
 
 /*
- * Begin a new journal entry. Used primarily as a safety check.
+ * Begin a new entry. Used primarily as a safety check.
  */
 int pvl_begin(pvl_t* pvl);
 
