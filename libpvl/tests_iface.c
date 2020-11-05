@@ -102,16 +102,48 @@ void test_init_leak_no_mirror() {
 void test_begin_pvl_null() {
     pvl_t* pvl = NULL;
     // pass some garbage
-    int result = pvl_begin(pvl);
-    assert(result != 0);
+    assert(pvl_begin(pvl));
+}
+
+void test_begin() {
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
+    char buffer[1024];
+    pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(!pvl_begin(pvl));
+}
+
+void test_begin_twice() {
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
+    char buffer[1024];
+    pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(!pvl_begin(pvl));
+    assert(pvl_begin(pvl));
+}
+
+void test_begin_after_mark() {
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
+    char buffer[1024];
+    pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(!pvl_begin(pvl));
+    assert(!pvl_mark(pvl, buffer, 64));
+    assert(pvl_begin(pvl));
+}
+
+void test_begin_after_commit() {
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
+    char buffer[1024];
+    pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(!pvl_begin(pvl));
+    assert(!pvl_mark(pvl, buffer, 128));
+    assert(!pvl_commit(pvl));
+    assert(!pvl_begin(pvl));
 }
 
 void test_mark_pvl_null() {
     pvl_t* pvl = NULL;
     int data = 0;
     // pass some garbage
-    int result = pvl_mark(pvl, (char*) &data, 28);
-    assert(result != 0);
+    assert(pvl_mark(pvl, (char*) &data, 28));
 }
 
 void test_mark_no_begin() {
@@ -125,48 +157,42 @@ void test_mark_mark_null() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
     char buffer[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    int result = pvl_mark(pvl, NULL, 128);
-    assert(result != 0);
+    assert(pvl_mark(pvl, NULL, 128));
 }
 
 void test_mark_zero_length() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
     char buffer[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    int result = pvl_mark(pvl, buffer, 0);
-    assert(result != 0);
+    assert(pvl_mark(pvl, buffer, 0));
 }
 
 void test_mark_before_main() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
     char buffer[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer+512, 512, NULL, NULL, NULL, NULL, NULL, NULL);
-    int result = pvl_mark(pvl, buffer, 64);
-    assert(result != 0);
+    assert(pvl_mark(pvl, buffer, 64));
 }
 
 void test_mark_mark_main_overlap() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
     char buffer[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer+512, 512, NULL, NULL, NULL, NULL, NULL, NULL);
-    int result = pvl_mark(pvl, buffer+496, 64);
-    assert(result != 0);
+    assert(pvl_mark(pvl, buffer+496, 64));
 }
 
 void test_mark_main_mark_overlap() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
     char buffer[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 512, NULL, NULL, NULL, NULL, NULL, NULL);
-    int result = pvl_mark(pvl, buffer+496, 64);
-    assert(result != 0);
+    assert(pvl_mark(pvl, buffer+496, 64));
 }
 
 void test_mark_after_main() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
     char buffer[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 512, NULL, NULL, NULL, NULL, NULL, NULL);
-    int result = pvl_mark(pvl, buffer+768, 64);
-    assert(result != 0);
+    assert(pvl_mark(pvl, buffer+768, 64));
 }
 
 void test_mark_start_of_main() {
@@ -205,8 +231,7 @@ void test_mark_all_of_main() {
 void test_commit_pvl_null() {
     pvl_t* pvl = NULL;
     // pass some garbage
-    int result = pvl_commit(pvl);
-    assert(result != 0);
+    assert(pvl_commit(pvl));
 }
 
 void test_commit_no_begin() {
@@ -260,8 +285,7 @@ void test_commit_over_max_marks() {
 void test_rollback_pvl_null() {
     pvl_t* pvl = NULL;
     // pass some garbage
-    int result = pvl_rollback(pvl);
-    assert(result != 0);
+    assert(pvl_rollback(pvl));
 }
 
 void test_rollback_no_mark_mirror() {
@@ -269,8 +293,7 @@ void test_rollback_no_mark_mirror() {
     char buffer[1024];
     char mirror[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 1024, mirror, NULL, NULL, NULL, NULL, NULL);
-    int result = pvl_rollback(pvl);
-    assert(result == 0);
+    assert(!pvl_rollback(pvl));
 }
 
 char* test_save_dynbuf = NULL;
@@ -322,6 +345,11 @@ int main() {
     test_init_leak_no_mirror();
 
     test_begin_pvl_null();
+    test_begin();
+    test_begin_twice();
+    test_begin_after_mark();
+    test_begin_after_commit();
+    //test_begin_after_rollback();
 
     test_mark_pvl_null();
     test_mark_no_begin();
