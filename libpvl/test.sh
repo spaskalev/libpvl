@@ -27,16 +27,16 @@ function on_err() {
     echo "Failure detected!"
 }
 
-function __clean() {
+function clean() {
     rm -f *.o *.so *.a *.out *.gcov *.gcda *.gcno
 }
 
-function __compile_shared_lib() {
+function compile_shared_lib() {
     ${CC} ${GC_OPT_LEVEL} ${GC_LIB_OPTS} -c -fpic ${LIB_SRC} -o ${LIB_OBJECT}
     ${CC} -shared ${GC_OPT_LEVEL} ${GC_LIB_OPTS} ${LIB_OBJECT} -o ${LIB_SHARED}
 }
 
-function __compile_and_run_shared_test() {
+function compile_and_run_shared_test() {
     ${CC} ${GC_OPT_LEVEL} ${GC_TEST_OPTS} -L. -lpvl ${1} -o ${TEST_BIN}
     LD_LIBRARY_PATH=".:${LD_LIBRARY_PATH}" ./${TEST_BIN}
     LD_LIBRARY_PATH=".:${LD_LIBRARY_PATH}" \
@@ -44,18 +44,18 @@ function __compile_and_run_shared_test() {
         ./${TEST_BIN}
 }
 
-function __compile_static_lib() {
+function compile_static_lib() {
     ${CC} ${GC_OPT_LEVEL} ${GC_LIB_OPTS} -c ${LIB_SRC} -o ${LIB_OBJECT}
     ar rcs ${LIB_STATIC} ${LIB_OBJECT}
 }
 
-function __compile_and_run_static_test() {
+function compile_and_run_static_test() {
     ${CC} -static ${GC_OPT_LEVEL} ${GC_TEST_OPTS} ${1} ${LIB_STATIC} -o ${TEST_BIN}
     ./${TEST_BIN}
     # static runs fail on valgrind with libc issues, fun
 }
 
-function __coverage() {
+function verify_coverage() {
     if [ "${CC}" != "gcc" ]; then
         echo "Skipping coverage for compiler ${CC}"
         return 0
@@ -64,57 +64,57 @@ function __coverage() {
     gcovr --branches --fail-under-branch ${BRANCH_COV}
 }
 
-function __test_shared() {
-    __clean
-    __compile_shared_lib
+function test_shared() {
+    clean
+    compile_shared_lib
     while [ "${1}" != "" ]; do
-        __compile_and_run_shared_test ${1}
+        compile_and_run_shared_test ${1}
         shift
     done
 }
 
-function __test_static() {
-    __clean
-    __compile_static_lib
+function test_static() {
+    clean
+    compile_static_lib
     while [ "${1}" != "" ]; do
-        __compile_and_run_static_test ${1}
+        compile_and_run_static_test ${1}
         shift
     done
 }
 
-function __test_debug() {
+function test_debug() {
     GC_OPT_LEVEL="-Og"
     GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD}"
     GC_TEST_OPTS="${GC_BASE_OPTS}"
-    __test_shared $@
-    __test_static $@
+    test_shared $@
+    test_static $@
 }
 
-function __test_coverage() {
+function test_coverage() {
     GC_OPT_LEVEL="-O0"
     GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD} --coverage"
     GC_TEST_OPTS="${GC_BASE_OPTS} --coverage"
-    __test_shared $@
-    __coverage
-    __test_static $@
-    __coverage
+    test_shared $@
+    verify_coverage
+    test_static $@
+    verify_coverage
 }
 
-function __test_optlevels() {
+function test_optlevels() {
     OPTS="-O0 -O1 -O2 -O3 -Os"
     for opt in $OPTS; do
         GC_OPT_LEVEL=${opt}
         GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD}"
         GC_TEST_OPTS="${GC_BASE_OPTS}"
-        __test_shared $@
-        __test_static $@
+        test_shared $@
+        test_static $@
     done
 }
 
-function __test() {
-    __test_debug $@
-    __test_coverage $@
-    __test_optlevels $@
+function test() {
+    test_debug $@
+    test_coverage $@
+    test_optlevels $@
 }
 
-__test ${TEST_SRC_IFACE} ${TEST_SRC_IMPL}
+test ${TEST_SRC_IFACE} ${TEST_SRC_IMPL}

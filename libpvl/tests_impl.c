@@ -25,7 +25,8 @@ void test_coalesce_one_mark() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
     char main_mem[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(0 == pvl_mark(pvl, main_mem, 1));
+    assert(!pvl_begin(pvl));
+    assert(!pvl_mark(pvl, main_mem, 1));
     size_t marks = pvl->marks_index;
     int coalesced;
     pvl_coalesce_marks(pvl, &coalesced);
@@ -37,8 +38,9 @@ void test_coalesce_many_marks() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(2)];
     char main_mem[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 2, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(0 == pvl_mark(pvl, main_mem, 1));
-    assert(0 == pvl_mark(pvl, main_mem+10, 1));
+    assert(!pvl_begin(pvl));
+    assert(!pvl_mark(pvl, main_mem, 1));
+    assert(!pvl_mark(pvl, main_mem+10, 1));
     assert(2 == pvl->marks_index);
     int coalesced;
     pvl_coalesce_marks(pvl, &coalesced);
@@ -50,8 +52,9 @@ void test_coalesce_overlapping_marks() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(2)];
     char main_mem[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 2, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(0 == pvl_mark(pvl, main_mem, 10));
-    assert(0 == pvl_mark(pvl, main_mem+5, 15));
+    assert(!pvl_begin(pvl));
+    assert(!pvl_mark(pvl, main_mem, 10));
+    assert(!pvl_mark(pvl, main_mem+5, 15));
     assert(2 == pvl->marks_index);
     int coalesced;
     pvl_coalesce_marks(pvl, &coalesced);
@@ -65,8 +68,9 @@ void test_coalesce_continuous_marks() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(2)];
     char main_mem[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 2, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(0 == pvl_mark(pvl, main_mem, 10));
-    assert(0 == pvl_mark(pvl, main_mem+10, 20));
+    assert(!pvl_begin(pvl));
+    assert(!pvl_mark(pvl, main_mem, 10));
+    assert(!pvl_mark(pvl, main_mem+10, 20));
     assert(2 == pvl->marks_index);
     int coalesced;
     pvl_coalesce_marks(pvl, &coalesced);

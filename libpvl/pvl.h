@@ -154,6 +154,11 @@ pvl_t* pvl_init(char *at, size_t marks,
     leak_cb_t leak_cb);
 
 /*
+ * Begin a new journal entry. Used primarily as a safety check.
+ */
+int pvl_begin(pvl_t* pvl);
+
+/*
  * Mark a span of memory for inclusion in the next commit.
  *
  * Make sure to call mark after the memory has been updated,

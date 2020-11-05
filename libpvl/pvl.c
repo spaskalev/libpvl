@@ -43,6 +43,7 @@ struct pvl_s {
     post_save_cb_t post_save_cb;
     leak_cb_t      leak_cb;
     int            partial;
+    int            in_transaction;
     FILE*          last_save_file;
     long           last_save_pos;
     size_t         marks_index;
@@ -138,8 +139,25 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
     return pvl;
 }
 
+int pvl_begin(pvl_t* pvl) {
+    if (pvl == NULL) {
+        return 1;
+    }
+
+	if (pvl->in_transaction) {
+		return 1;
+	}
+
+	pvl->in_transaction = 1;
+	return 0;
+}
+
 int pvl_mark(pvl_t* pvl, char* start, size_t length) {
     if (pvl == NULL) {
+        return 1;
+    }
+
+    if (!pvl->in_transaction) {
         return 1;
     }
 
@@ -193,7 +211,12 @@ int pvl_commit(pvl_t* pvl) {
         return 1;
     }
 
+    if (!pvl->in_transaction) {
+        return 1;
+    }
+
     // Commit is just a non-partial save
+    pvl->in_transaction = 0;
     return pvl_save(pvl, 0);
 }
 
@@ -201,6 +224,11 @@ int pvl_rollback(pvl_t* pvl) {
     if (pvl == NULL) {
         return 1;
     }
+
+    if (!pvl->in_transaction) {
+        return 1;
+    }
+
     if (pvl->mirror != NULL) {
         if (pvl->partial) {
             // Perform a full copy
@@ -218,6 +246,7 @@ int pvl_rollback(pvl_t* pvl) {
         return 0;
     } // else
     pvl_clear_marks(pvl);
+    pvl->in_transaction = 0;
     return pvl_load(pvl, 1, pvl->last_save_file, pvl->last_save_pos);
 }
 
