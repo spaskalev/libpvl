@@ -13,7 +13,7 @@ LIB_OBJECT="libpvl.o"
 LIB_SHARED="libpvl.so"
 LIB_STATIC="libpvl.a"
 
-LINE_COV="80"
+LINE_COV="60"
 BRANCH_COV="50"
 
 IMPL_GUARD="WARNING_DO_NOT_INCLUDE_PLV_C"
@@ -55,9 +55,11 @@ function compile_and_run_static_test() {
 
 function verify_coverage() {
     rm gcovr/*.html
+    # Generate full coverage report
     gcovr --html-details --output gcovr/coverage.html
-    gcovr --fail-under-line ${LINE_COV}
-    gcovr --branches --fail-under-branch ${BRANCH_COV}
+    # Enforce coverage, exclude tests
+    gcovr --exclude 'tests_.*' --fail-under-line ${LINE_COV}
+    gcovr --exclude 'tests_.*' --branches --fail-under-branch ${BRANCH_COV}
 }
 
 function test_shared() {
@@ -119,5 +121,4 @@ function test() {
     test_optlevels $@
 }
 
-test ${TEST_SRC_IFACE} ${TEST_SRC_IMPL}
-# ${TEST_SRC_E2E}
+test ${TEST_SRC_IFACE} ${TEST_SRC_IMPL} ${TEST_SRC_E2E}
