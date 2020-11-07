@@ -162,7 +162,7 @@ int pvl_mark(pvl_t* pvl, char* start, size_t length) {
     }
 
     // Validate mark
-    if ((start == NULL) || (length == 0) || (start < pvl->main)
+    if ((length == 0) || (start < pvl->main)
             || ((start+length) > (pvl->main+pvl->length))) {
         return 1;
     }

@@ -41,9 +41,6 @@ function compile_shared_lib() {
 function compile_and_run_shared_test() {
     ${CC} ${GC_OPT_LEVEL} ${GC_TEST_OPTS} -L. -lpvl ${1} -o ${TEST_BIN}
     LD_LIBRARY_PATH=".:${LD_LIBRARY_PATH}" ./${TEST_BIN}
-    #LD_LIBRARY_PATH=".:${LD_LIBRARY_PATH}" \
-    #    valgrind --error-exitcode=1 --exit-on-first-error=yes --track-origins=yes \
-    #    ./${TEST_BIN}
 }
 
 function compile_static_lib() {
@@ -54,14 +51,9 @@ function compile_static_lib() {
 function compile_and_run_static_test() {
     ${CC} -static ${GC_OPT_LEVEL} ${GC_TEST_OPTS} ${1} ${LIB_STATIC} -o ${TEST_BIN}
     ./${TEST_BIN}
-    # static runs fail on valgrind with libc issues, fun
 }
 
 function verify_coverage() {
-    if [ "${CC}" != "gcc" ]; then
-        echo "Skipping coverage for compiler ${CC}"
-        return 0
-    fi
     rm gcovr/*.html
     gcovr --html-details --output gcovr/coverage.html
     gcovr --fail-under-line ${LINE_COV}
@@ -70,7 +62,6 @@ function verify_coverage() {
 
 function test_shared() {
     clean
-    
     compile_shared_lib
     while [ "${1}" != "" ]; do
         compile_and_run_shared_test ${1}
@@ -88,7 +79,7 @@ function test_static() {
 }
 
 function test_debug() {
-    GC_OPT_LEVEL="-Og"
+    GC_OPT_LEVEL="-Og -O0"
     GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD} ${GC_SANS_OPTS}"
     GC_TEST_OPTS="${GC_BASE_OPTS} ${GC_SANS_OPTS}"
     test_shared $@
@@ -98,23 +89,27 @@ function test_debug() {
 }
 
 function test_coverage() {
+    if [ "${CC}" != "gcc" ]; then
+        echo "Skipping coverage for compiler ${CC}"
+        return 0
+    fi
     GC_OPT_LEVEL="-O0"
     GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD} --coverage"
     GC_TEST_OPTS="${GC_BASE_OPTS} --coverage"
     test_shared $@
     verify_coverage
-    test_static $@
-    verify_coverage
+    #test_static $@
+    #verify_coverage
 }
 
 function test_optlevels() {
-    OPTS="-O0 -O1 -O2 -O3 -Os"
+    OPTS="-O1 -O2 -O3 -Os"
     for opt in $OPTS; do
         GC_OPT_LEVEL=${opt}
         GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD}"
         GC_TEST_OPTS="${GC_BASE_OPTS}"
         test_shared $@
-        test_static $@
+        #test_static $@
     done
 }
 
@@ -124,4 +119,5 @@ function test() {
     test_optlevels $@
 }
 
-test ${TEST_SRC_IFACE} ${TEST_SRC_IMPL} ${TEST_SRC_E2E}
+test ${TEST_SRC_IFACE} ${TEST_SRC_IMPL}
+# ${TEST_SRC_E2E}

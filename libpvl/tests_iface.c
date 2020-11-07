@@ -157,6 +157,7 @@ void test_mark_mark_null() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
     char buffer[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(!pvl_begin(pvl));
     assert(pvl_mark(pvl, NULL, 128));
 }
 
@@ -164,6 +165,7 @@ void test_mark_zero_length() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
     char buffer[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(!pvl_begin(pvl));
     assert(pvl_mark(pvl, buffer, 0));
 }
 
@@ -171,6 +173,7 @@ void test_mark_before_main() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
     char buffer[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer+512, 512, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(!pvl_begin(pvl));
     assert(pvl_mark(pvl, buffer, 64));
 }
 
@@ -178,6 +181,7 @@ void test_mark_mark_main_overlap() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
     char buffer[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer+512, 512, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(!pvl_begin(pvl));
     assert(pvl_mark(pvl, buffer+496, 64));
 }
 
@@ -185,6 +189,7 @@ void test_mark_main_mark_overlap() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
     char buffer[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 512, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(!pvl_begin(pvl));
     assert(pvl_mark(pvl, buffer+496, 64));
 }
 
@@ -192,6 +197,7 @@ void test_mark_after_main() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
     char buffer[1024];
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 512, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(!pvl_begin(pvl));
     assert(pvl_mark(pvl, buffer+768, 64));
 }
 
