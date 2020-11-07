@@ -258,15 +258,6 @@ static void pvl_clear_marks(pvl_t* pvl) {
 static int pvl_mark_compare(const void *a, const void *b) {
     pvl_mark_t* mark_a = (pvl_mark_t*)a;
     pvl_mark_t* mark_b = (pvl_mark_t*)b;
-    if ((!mark_a->start) && (!mark_b->start)) {
-        return 0;
-    }
-    if ((!mark_a->start) && (mark_b->start)) {
-        return -1;
-    }
-    if ((mark_a->start) && (!mark_b->start)) {
-        return 1;
-    }
     if (mark_a->start > mark_b->start) {
         return 1;
     }

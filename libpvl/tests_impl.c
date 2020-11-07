@@ -80,6 +80,46 @@ void test_coalesce_continuous_marks() {
     assert(pvl->marks[0].length == 20);
 }
 
+void test_pvl_mark_compare_null_null() {
+    pvl_mark_t a, b;
+    a = (pvl_mark_t){0};
+    b = (pvl_mark_t){0};
+    assert(pvl_mark_compare(&a, &b) == 0);
+}
+
+void test_pvl_mark_compare_first_larger() {
+    char buf[512];
+    pvl_mark_t a, b;
+    a = (pvl_mark_t){0};
+    b = (pvl_mark_t){0};
+
+    a.start = buf+512;
+    b.start = buf;
+    assert(pvl_mark_compare(&a, &b) == 1);
+}
+
+void test_pvl_mark_compare_first_smaller() {
+    char buf[512];
+    pvl_mark_t a, b;
+    a = (pvl_mark_t){0};
+    b = (pvl_mark_t){0};
+
+    a.start = buf;
+    b.start = buf+512;
+    assert(pvl_mark_compare(&a, &b) == -1);
+}
+
+void test_pvl_mark_compare_equal() {
+    char buf[512];
+    pvl_mark_t a, b;
+    a = (pvl_mark_t){0};
+    b = (pvl_mark_t){0};
+
+    a.start = buf;
+    b.start = buf;
+    assert(pvl_mark_compare(&a, &b) == 0);
+}
+
 int main() {
     //TODO
 
@@ -94,5 +134,12 @@ int main() {
     test_coalesce_continuous_marks();
 
     // test_auto_coalesce upon mark limit
+
+    // pvl_mark_compare
+    test_pvl_mark_compare_null_null();
+    test_pvl_mark_compare_first_larger();
+    test_pvl_mark_compare_first_smaller();
+    test_pvl_mark_compare_equal();
+
     return 0;
 }

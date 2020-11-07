@@ -97,6 +97,8 @@ void test_init_leak_no_mirror() {
     pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 1024, NULL, NULL, NULL, NULL, NULL,
         test_init_leak_no_mirror_leak_cb);
     assert(pvl == NULL);
+    // call empty cb, ensure line coverage
+    test_init_leak_no_mirror_leak_cb(NULL, NULL, 0, 0);
 }
 
 void test_begin_pvl_null() {
@@ -292,14 +294,6 @@ void test_rollback_pvl_null() {
     pvl_t* pvl = NULL;
     // pass some garbage
     assert(pvl_rollback(pvl));
-}
-
-void test_rollback_no_mark_mirror() {
-    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
-    char buffer[1024];
-    char mirror[1024];
-    pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 1024, mirror, NULL, NULL, NULL, NULL, NULL);
-    assert(!pvl_rollback(pvl));
 }
 
 char* test_save_dynbuf = NULL;
