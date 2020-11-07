@@ -55,3 +55,5 @@ dkms.conf
 *.gcov
 *.gcda
 *.gcno
+libpvl/gcovr/*
+

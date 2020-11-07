@@ -46,16 +46,16 @@ size_t pvl_sizeof_pvl_t(size_t marks);
  *
  * pvl                - The pvl_t instance that is calling the callback.
  * initial            - Flag indicating whether a load from start is requested.
- * req_from           - If set indicates that a load from this file is requested.
+ * up_to_src          - If set indicates that a load up to this this file is requested.
  *                      The value will be a previously-obtained file during saving.
- * req_pos            - If set indicates that a load from this position is requested.
+ * up_to_pos          - If set indicates that a load up to this position is requested.
  *                      The value will be a previously-obtained position during saving.
  *
  * Returns
  *
  * FILE*              - The FILE* to load from. Return NULL to indicate failure.
  */
-typedef FILE* (*pre_load_cb_t)(pvl_t* pvl, int initial, FILE* req_from, long req_pos);
+typedef FILE* (*pre_load_cb_t)(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos);
 
 /*
  * Callback for confirming a loaded change

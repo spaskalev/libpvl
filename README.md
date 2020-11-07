@@ -1,5 +1,5 @@
 # libpvl
-libpvl is a system prevalence library written in C
+libpvl is a system prevalence library for C
 
 ## Overview
 
@@ -7,13 +7,17 @@ Compared to other prevalence libraries for high-level languages libpvl is simple
 
 ## Licensing
 
-libpvl is licensed under the 0BSD license. See the LICENSE.md file in this directory.
+libpvl is licensed under the 0BSD license. See the LICENSE.md file for details.
 
 ## Design
 
+### Abstract IO
+
 libpvl is designed to abstract domain code from IO handling. Domain code has access to a few functions (pvl_begin, pvl_mark, pvl_commit, pvl_rollback) that in turn call callbacks to handle the IO. This makes it easy to use different IO handlers without performing any changes on the domain code. The IO handlers can be anything from no-op or in-memory ones for testing, through regular file-based I/O or even over-the-network replication for high availability. Once the libpvl core is complete development will shift towards a set of IO handlers.
 
-libpvl is also designed to be developer-friendly through a small and well-defined API, defensive programming style and a comprehensive test suite. It includes troubleshooting facilities to help developers find bugs and tune their applications.
+### Ease of use
+
+libpvl is designed to be developer-friendly through a small and well-defined API, a defensive programming style and a comprehensive test suite. It includes troubleshooting facilities to help developers find bugs and tune their applications.
 
 ## Usage
 
@@ -30,7 +34,6 @@ The pre-save callback will be called whenever libpvl deems necessary to persist 
 The post-save callback will be called after libpvl has attempted to persist a change. It will indicate whether this was successful.
 
 ### Initialization
-
 
 libpvl's main object type is pvl_t\*, an opaque pointer that is initialized by pvl_init(...) at the specified memory location. If the parameters are correct a non-NULL pvl_t\* is returned that can be operated upon by the rest of the functions.
 

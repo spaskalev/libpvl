@@ -475,7 +475,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
     return 0;
 }
 
-static int pvl_load(pvl_t* pvl, int initial, FILE* req_from, long req_pos) {
+static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
     /*
      * Cannot load anything if there is no pre-load callback
      */
@@ -497,7 +497,7 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* req_from, long req_pos) {
         /*
          * Call the pre-load callback.
          */
-        file = (pvl->pre_load_cb)(pvl, initial, req_from, req_pos);
+        file = (pvl->pre_load_cb)(pvl, initial, up_to_src, up_to_pos);
 
         if (!file) {
             // Nothing to load
