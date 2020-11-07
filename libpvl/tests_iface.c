@@ -296,40 +296,6 @@ void test_rollback_pvl_null() {
     assert(pvl_rollback(pvl));
 }
 
-char* test_save_dynbuf = NULL;
-size_t test_save_dynlen = 0;
-FILE* test_save_dynfile = NULL;
-
-FILE* test_save_pre_save_cb(pvl_t* pvl, int full, size_t length) {
-    (void)(pvl);
-    (void)(full);
-    (void)(length);
-    test_save_dynfile = open_memstream(&test_save_dynbuf, &test_save_dynlen);
-    return test_save_dynfile;
-}
-
-int test_save_post_save_cb(pvl_t* pvl, int full, size_t length, FILE* file, int status) {
-    (void)(pvl);
-    (void)(full);
-    (void)(status);
-    fflush(file);
-    assert(length == test_save_dynlen);
-    fclose(test_save_dynfile);
-    free(test_save_dynbuf);
-    return 0;
-}
-
-void test_save() {
-    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
-    char buffer[1024];
-    pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 1024, NULL, NULL, NULL,
-        test_save_pre_save_cb, test_save_post_save_cb, NULL);
-    memcpy(buffer, "Hello world\0", 12);
-    assert(!pvl_begin(pvl));
-    assert(!pvl_mark(pvl, buffer, 12));
-    assert(!pvl_commit(pvl));
-}
-
 int main() {
     test_init_misalignment();
     test_init_alignment();
@@ -390,8 +356,6 @@ int main() {
     test_leak_mirror();
     test_leak_no_mirror();
     */
-
-    test_save();
 
     return 0;
 }
