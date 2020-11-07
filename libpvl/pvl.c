@@ -171,11 +171,6 @@ int pvl_mark(pvl_t* pvl, char* start, size_t length) {
             return pvl_mark(pvl, start, length);
         }
 
-        if (pvl->leak_cb != NULL) {
-            // Leak detection is enabled and it cannot be performed with partial writes
-            return 1;
-        }
-
         // Save a partial change
         int partial = pvl_save(pvl, 1);
         if (partial) {
@@ -280,7 +275,7 @@ static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
                 continue;
             }
             pvl->marks_index = i;
-            for (size_t j = i+1; j < pvl->marks_index; j++) {
+            for (size_t j = i+1; j < pvl->marks_count; j++) {
                 if (! pvl->marks[j].start) {
                     continue;
                 }

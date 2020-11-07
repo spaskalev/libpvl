@@ -11,9 +11,10 @@
 #include "pvl.c"
 
 void test_coalesce_no_marks() {
-    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
+    size_t mark_count = 1;
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(mark_count)];
     char main_mem[1024];
-    pvl_t* pvl = pvl_init(pvlbuf, 1, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    pvl_t* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
     size_t marks = pvl->marks_index;
     int coalesced;
     pvl_coalesce_marks(pvl, &coalesced);
@@ -22,9 +23,10 @@ void test_coalesce_no_marks() {
 }
 
 void test_coalesce_one_mark() {
-    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
+    size_t mark_count = 1;
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(mark_count)];
     char main_mem[1024];
-    pvl_t* pvl = pvl_init(pvlbuf, 1, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    pvl_t* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
     assert(!pvl_begin(pvl));
     assert(!pvl_mark(pvl, main_mem, 1));
     size_t marks = pvl->marks_index;
@@ -35,9 +37,10 @@ void test_coalesce_one_mark() {
 }
 
 void test_coalesce_many_marks() {
-    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(2)];
+    size_t mark_count = 2;
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(mark_count)];
     char main_mem[1024];
-    pvl_t* pvl = pvl_init(pvlbuf, 2, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    pvl_t* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
     assert(!pvl_begin(pvl));
     assert(!pvl_mark(pvl, main_mem, 1));
     assert(!pvl_mark(pvl, main_mem+10, 1));
@@ -49,9 +52,10 @@ void test_coalesce_many_marks() {
 }
 
 void test_coalesce_overlapping_marks() {
-    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(2)];
+    size_t mark_count = 3;
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(mark_count)];
     char main_mem[1024];
-    pvl_t* pvl = pvl_init(pvlbuf, 2, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    pvl_t* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
     assert(!pvl_begin(pvl));
     assert(!pvl_mark(pvl, main_mem, 10));
     assert(!pvl_mark(pvl, main_mem+5, 15));
@@ -65,19 +69,23 @@ void test_coalesce_overlapping_marks() {
 }
 
 void test_coalesce_continuous_marks() {
-    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(2)];
+    size_t mark_count = 3;
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(mark_count)];
     char main_mem[1024];
-    pvl_t* pvl = pvl_init(pvlbuf, 2, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    pvl_t* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
     assert(!pvl_begin(pvl));
     assert(!pvl_mark(pvl, main_mem, 10));
     assert(!pvl_mark(pvl, main_mem+10, 20));
-    assert(2 == pvl->marks_index);
+    assert(!pvl_mark(pvl, main_mem+100, 20));
+    assert(mark_count == pvl->marks_index);
     int coalesced;
     pvl_coalesce_marks(pvl, &coalesced);
     assert(coalesced == 1);
-    assert(1 == pvl->marks_index);
+    assert(2 == pvl->marks_index);
     assert(pvl->marks[0].start == main_mem);
     assert(pvl->marks[0].length == 20);
+    assert(pvl->marks[1].start == main_mem+100);
+    assert(pvl->marks[1].length == 20);
 }
 
 void test_pvl_mark_compare_null_null() {
