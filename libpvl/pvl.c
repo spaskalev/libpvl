@@ -60,7 +60,6 @@ static int pvl_save(pvl_t* pvl, int partial);
 static void pvl_clear_marks(pvl_t* pvl);
 static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag);
 static int pvl_leak_detection(pvl_t* pvl);
-static int pvl_default_post_save(pvl_t* pvl, int full, size_t length, FILE* file, int failed);
 
 pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
     pre_load_cb_t pre_load_cb, post_load_cb_t post_load_cb,
@@ -109,32 +108,19 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
         pvl->mirror = mirror;
     }
 
+    // Callbacks are checked at call sites
+    pvl->pre_load_cb = pre_load_cb;
     pvl->post_load_cb = post_load_cb;
 
-    // Perform initial loading if a load callback is available
-    if (pre_load_cb != NULL) {
-        pvl->pre_load_cb = pre_load_cb;
-        int load_result = pvl_load(pvl, 1, NULL, 0);
-        // TODO handle
-        if (load_result != 0) {
-            return NULL;
-        }
-    }
+    pvl->pre_save_cb = pre_save_cb;
+    pvl->post_save_cb = post_save_cb;
 
-    /*
-     * A load-only (e.g. replicating) pvl might have no save callback.
-     */
-    if (pre_save_cb) {
-        pvl->pre_save_cb = pre_save_cb;
-        if (post_save_cb) {
-            pvl->post_save_cb = post_save_cb;
-        } else {
-            pvl->post_save_cb = pvl_default_post_save;
-        }
-    }
-
-    // The leak detection is optional and will be checked upon use.
     pvl->leak_cb = leak_cb;
+
+    // Perform initial load
+    if (pvl_load(pvl, 1, NULL, 0) != 0) {
+        return NULL;
+    }
 
     return pvl;
 }
@@ -307,18 +293,6 @@ static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
     if (coalesced_flag != NULL) {
         *coalesced_flag = coalesced;
     }
-}
-
-static int pvl_default_post_save(pvl_t* pvl, int full, size_t length, FILE* file, int failed) {
-    (void)(pvl);
-    (void)(full);
-    (void)(length);
-    (void)(file);
-    (void)(failed);
-    /*
-     * Empty
-     */
-    return 0;
 }
 
 /*
