@@ -10,6 +10,8 @@
 #define WARNING_DO_NOT_INCLUDE_PLV_C
 #include "pvl.c"
 
+#include "tests_common.h"
+
 void test_coalesce_no_marks() {
     size_t mark_count = 1;
     alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(mark_count)];
@@ -128,12 +130,42 @@ void test_pvl_mark_compare_equal() {
     assert(pvl_mark_compare(&a, &b) == 0);
 }
 
-int main() {
-    //TODO
+void test_pvl_save_fwrite_failure() {
+    printf("\n[test_basic_commit]\n");
+    int written_length = 96;
+    int marks_count = 10;
 
-    // Cover:
-    // partial saves
-    // coalesced marks
+    ctx = (test_ctx){0};
+
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, NULL, NULL, pre_save, post_save, NULL);
+    assert(ctx.pvl != NULL);
+
+    ctx.pre_save[0].return_file = NULL;
+    ctx.pre_save[0].expected_pvl = ctx.pvl;
+    ctx.pre_save[0].expected_full = 0;
+    ctx.pre_save[0].expected_length = written_length;
+
+    ctx.post_save[0].return_int = 0;
+    ctx.post_save[0].expected_pvl = ctx.pvl;
+    ctx.post_save[0].expected_full = 0;
+    ctx.post_save[0].expected_length = written_length;
+    ctx.post_save[0].expected_file = NULL;
+    ctx.post_save[0].expected_failed = 1;
+
+    // Write and commit some data
+    assert(!pvl_begin(ctx.pvl));
+    memset(ctx.buf, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
+    assert(pvl_commit(ctx.pvl));
+
+    assert(ctx.pre_save_pos == 1);
+    assert(ctx.post_save_pos == 1);
+
+    //assert(!fclose(ctx.dyn_file));
+    //free(ctx.dyn_buf);
+}
+
+int main() {
 
     test_coalesce_no_marks();
     test_coalesce_one_mark();
@@ -141,13 +173,12 @@ int main() {
     test_coalesce_overlapping_marks();
     test_coalesce_continuous_marks();
 
-    // test_auto_coalesce upon mark limit
-
-    // pvl_mark_compare
     test_pvl_mark_compare_null_null();
     test_pvl_mark_compare_first_larger();
     test_pvl_mark_compare_first_smaller();
     test_pvl_mark_compare_equal();
+
+    test_pvl_save_fwrite_failure();
 
     return 0;
 }
