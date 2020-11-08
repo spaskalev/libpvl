@@ -467,6 +467,7 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
     long last_good_pos = 0;
     int reset_load = 0;
 
+    read_loop:
     while (1) {
         if (reset_load) {
             initial = 1;
@@ -499,7 +500,7 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
             // Couldn't load the change, signal the callback
             if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
                 reset_load = 1;
-                continue;
+                goto read_loop;
             }
             return 1;
         }
@@ -513,7 +514,7 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
                 // Couldn't load the change, signal the callback
                 if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
                     reset_load = 1;
-                    continue;
+                    goto read_loop;
                 }
                 return 1;
             }
@@ -521,7 +522,7 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
                 // Couldn't load the change, signal the callback
                 if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
                     reset_load = 1;
-                    continue;
+                    goto read_loop;
                 }
                 return 1;
             }
@@ -540,7 +541,7 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
 
         // Report success  via the post-load callback
         if ((pvl->post_load_cb)(pvl, file, 0, last_good_pos)) {
-            continue;
+            goto read_loop;
         }
         return 0;
     }
