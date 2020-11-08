@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 
 /*
  * Define the guard to test implementation details
@@ -130,8 +131,41 @@ void test_pvl_mark_compare_equal() {
     assert(pvl_mark_compare(&a, &b) == 0);
 }
 
-void test_pvl_save_fwrite_failure() {
-    printf("\n[test_basic_commit]\n");
+void test_pvl_init_initial_load_error() {
+    printf("\n[test_pvl_init_initial_load_error]\n");
+    int marks_count = 10;
+
+    ctx = (test_ctx){0};
+    char buffer[1024];
+
+    FILE* load_src = fmemopen(buffer,1,"r");
+    printf("%d\n", errno);
+    assert(load_src);
+
+    // To break a circular dependency :)
+    pvl_t* pvl = (pvl_t*)ctx.pvl_at;
+
+    ctx.pre_load[0].return_file = load_src;
+    ctx.pre_load[0].expected_pvl = pvl;
+    ctx.pre_load[0].expected_initial = 1;
+    ctx.pre_load[0].expected_up_to_src = NULL;
+    ctx.pre_load[0].expected_up_to_pos = 0;
+
+    ctx.post_load[0].return_int = 0;
+    ctx.post_load[0].expected_pvl = pvl;
+    ctx.post_load[0].expected_file = load_src;
+    ctx.post_load[0].expected_failed = 1;
+    ctx.post_load[0].expected_last_good = 0;
+
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, pre_load, post_load, NULL, NULL, NULL);
+    assert(ctx.pvl == NULL);
+
+    //assert(!fclose(ctx.dyn_file));
+    //free(ctx.dyn_buf);
+}
+
+void test_pvl_save_no_destination() {
+    printf("\n[test_pvl_save_no_destination]\n");
     int written_length = 96;
     int marks_count = 10;
 
@@ -160,9 +194,6 @@ void test_pvl_save_fwrite_failure() {
 
     assert(ctx.pre_save_pos == 1);
     assert(ctx.post_save_pos == 1);
-
-    //assert(!fclose(ctx.dyn_file));
-    //free(ctx.dyn_buf);
 }
 
 int main() {
@@ -178,7 +209,9 @@ int main() {
     test_pvl_mark_compare_first_smaller();
     test_pvl_mark_compare_equal();
 
-    test_pvl_save_fwrite_failure();
+    test_pvl_init_initial_load_error();
+
+    test_pvl_save_no_destination();
 
     return 0;
 }
