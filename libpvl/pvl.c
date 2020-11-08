@@ -448,13 +448,6 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
         return 0;
     }
 
-    /*
-     * Do not perform any loads if there are pending marks
-     */
-    if (pvl->marks_index || pvl->partial) {
-        return 1;
-    }
-
     FILE *file;
     long last_good_pos = 0;
 
