@@ -116,7 +116,7 @@ void test_basic() {
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
 
     ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
@@ -184,7 +184,7 @@ void test_basic_mirror() {
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
 
     ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
@@ -246,7 +246,35 @@ void test_basic_mirror() {
     free(ctx.dyn_buf);
 }
 
+void test_basic_rollback_mirror() {
+    int marks_count = 10;
+
+    ctx = (test_ctx){0};
+
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    assert(ctx.pvl != NULL);
+
+    // Write some data and rollback
+    assert(!pvl_begin(ctx.pvl));
+    memset(ctx.buf, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
+    assert(!pvl_rollback(ctx.pvl));
+
+    assert(ctx.pre_save.call_count == 0);
+    assert(ctx.post_save.call_count == 0);
+
+    assert(ctx.pre_load.call_count == 0);
+    assert(ctx.post_load.call_count == 0);
+
+    // Verify it
+    for (size_t i = 0; i < 1024; i++) {
+        assert(ctx.buf[i] == 0);
+    }
+}
+
 int main() {
     test_basic();
     test_basic_mirror();
+
+    test_basic_rollback_mirror();
 }
