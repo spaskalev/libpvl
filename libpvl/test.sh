@@ -13,7 +13,7 @@ LIB_OBJECT="libpvl.o"
 LIB_SHARED="libpvl.so"
 LIB_STATIC="libpvl.a"
 
-LIB_LINE_COV="87"
+LIB_LINE_COV="89"
 LIB_BRANCH_COV="84"
 
 TEST_LINE_COV="100"
