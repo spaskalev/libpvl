@@ -236,6 +236,17 @@ void test_mark_all_of_main() {
     assert(!pvl_mark(pvl, buffer, 1024));
 }
 
+void test_mark_extra_marks() {
+    int marks = 2;
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(marks)];
+    char buffer[1024];
+    pvl_t* pvl = pvl_init(pvlbuf, marks, buffer, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(!pvl_begin(pvl));
+    assert(!pvl_mark(pvl, buffer, 10));
+    assert(!pvl_mark(pvl, buffer, 20));
+    assert(!pvl_mark(pvl, buffer, 30));
+}
+
 void test_commit_pvl_null() {
     pvl_t* pvl = NULL;
     // pass some garbage
@@ -329,6 +340,7 @@ int main() {
     test_mark_middle_of_main();
     test_mark_end_of_main();
     test_mark_all_of_main();
+    test_mark_extra_marks();
 
     test_commit_pvl_null();
     test_commit_no_begin();
