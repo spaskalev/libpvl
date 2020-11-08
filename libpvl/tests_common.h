@@ -35,6 +35,13 @@ typedef struct {
 } post_save_ctx;
 
 typedef struct {
+    pvl_t* expected_pvl;
+    void*  expected_start;
+    size_t expected_length;
+    int    expected_partial;
+} leak_ctx;
+
+typedef struct {
     pvl_t* pvl;
     alignas(max_align_t) char pvl_at[1024];
     alignas(max_align_t) char buf[1024];
@@ -60,6 +67,9 @@ typedef struct {
 
     post_save_ctx post_save[10];
     int           post_save_pos;
+
+    leak_ctx      leak[10];
+    int           leak_pos;
 } test_ctx;
 
 // Shared global
@@ -123,4 +133,19 @@ int post_save(pvl_t* pvl, int full, size_t length, FILE* file, int failed) {
     assert(failed == fix.expected_failed);
     ctx.post_save_pos++;
     return fix.return_int;
+}
+
+void leak(pvl_t* pvl, void* start, size_t length, int partial) {
+    printf("\n    [leak] [%d] \n", ctx.leak_pos);
+    leak_ctx fix = ctx.leak[ctx.leak_pos];
+    printf("    pvl: %p expected: %p\n", (void*) pvl, (void*) fix.expected_pvl);
+    assert(pvl == fix.expected_pvl);
+    printf("  start: %p expected: %p\n", start, fix.expected_start);
+    assert(start == fix.expected_start);
+    printf(" length: %ld expected: %ld\n", length, fix.expected_length);
+    assert(length == fix.expected_length);
+    printf("partial: %d expected: %d\n", partial, fix.expected_partial);
+    assert(partial == fix.expected_partial);
+    ctx.leak_pos++;
+    return;
 }

@@ -813,6 +813,89 @@ void test_pvl_save_no_destination() {
     assert(ctx.post_save_pos == 1);
 }
 
+void test_leak_no_mirror() {
+    printf("\n[test_leak_no_mirror]\n");
+    int marks_count = 10;
+
+    ctx = (test_ctx){0};
+
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, NULL, NULL, NULL, NULL, leak);
+    assert(ctx.pvl == NULL);
+}
+
+void test_leak_detected() {
+    printf("\n[test_leak]\n");
+    int written_length = 64;
+    int marks_count = 10;
+
+    ctx = (test_ctx){0};
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, leak);
+    assert(ctx.pvl);
+
+    ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
+
+    ctx.pre_save[0].return_file = ctx.dyn_file;
+    ctx.pre_save[0].expected_pvl = ctx.pvl;
+    ctx.pre_save[0].expected_full = 0;
+    ctx.pre_save[0].expected_length = written_length;
+
+    ctx.post_save[0].return_int = 0;
+    ctx.post_save[0].expected_pvl = ctx.pvl;
+    ctx.post_save[0].expected_full = 0;
+    ctx.post_save[0].expected_length = written_length;
+    ctx.post_save[0].expected_file = ctx.dyn_file;
+    ctx.post_save[0].expected_failed = 0;
+
+    ctx.leak[0].expected_pvl = ctx.pvl;
+    ctx.leak[0].expected_start = ctx.buf+32;
+    ctx.leak[0].expected_length = 32;
+    ctx.leak[0].expected_partial = 0;
+
+    // Write and commit some data
+    assert(!pvl_begin(ctx.pvl));
+    memset(ctx.buf, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.buf, 32));
+    assert(!pvl_commit(ctx.pvl));
+    assert(ctx.leak_pos == 1);
+
+    assert(!fclose(ctx.dyn_file));
+    free(ctx.dyn_buf);
+}
+
+void test_leak_no_leak() {
+    printf("\n[test_leak]\n");
+    int written_length = 64;
+    int marks_count = 10;
+
+    ctx = (test_ctx){0};
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, leak);
+    assert(ctx.pvl);
+
+    ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
+
+    ctx.pre_save[0].return_file = ctx.dyn_file;
+    ctx.pre_save[0].expected_pvl = ctx.pvl;
+    ctx.pre_save[0].expected_full = 0;
+    ctx.pre_save[0].expected_length = written_length;
+
+    ctx.post_save[0].return_int = 0;
+    ctx.post_save[0].expected_pvl = ctx.pvl;
+    ctx.post_save[0].expected_full = 0;
+    ctx.post_save[0].expected_length = written_length;
+    ctx.post_save[0].expected_file = ctx.dyn_file;
+    ctx.post_save[0].expected_failed = 0;
+
+    // Write and commit some data
+    assert(!pvl_begin(ctx.pvl));
+    memset(ctx.buf, 1, 32);
+    assert(!pvl_mark(ctx.pvl, ctx.buf, 32));
+    assert(!pvl_commit(ctx.pvl));
+    assert(ctx.leak_pos == 0);
+
+    assert(!fclose(ctx.dyn_file));
+    free(ctx.dyn_buf);
+}
+
 int main() {
 
     test_coalesce_no_marks();
@@ -842,6 +925,10 @@ int main() {
     test_pvl_save_error_fail_partial();
 
     test_pvl_save_no_destination();
+
+    test_leak_no_mirror();
+    test_leak_detected();
+    test_leak_no_leak();
 
     return 0;
 }

@@ -67,7 +67,7 @@ static int pvl_save(pvl_t* pvl, int partial);
 static void pvl_clear_marks(pvl_t* pvl);
 static void pvl_clear_memory(pvl_t* pvl);
 static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag);
-static int pvl_leak_detection(pvl_t* pvl);
+static int pvl_leak_detection(pvl_t* pvl, int partial);
 
 pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
     pre_load_cb_t pre_load_cb, post_load_cb_t post_load_cb,
@@ -325,20 +325,6 @@ static int pvl_save(pvl_t* pvl, int partial) {
     }
 
     /*
-     * Perform leak detection if prereqs are met.
-     *
-     * Leak detection is still possible with partial writes,
-     * although to avoid false positives a change should be
-     * marked as soon as it is made in memory, which may
-     * incur some performance overhead. Nevertheless,
-     * leak detection is primarily a debugging tool that
-     * can be useful even if it has certain deficiencies.
-     */
-    if (pvl->leak_cb && pvl->mirror) {
-        pvl_leak_detection(pvl);
-    }
-
-    /*
      * Early return if there is no save handler
      */
     if (pvl->pre_save_cb == NULL) {
@@ -452,6 +438,20 @@ static int pvl_save(pvl_t* pvl, int partial) {
         (pvl->post_save_cb)(pvl, full, total, file, 0);
     }
 
+    /*
+     * Perform leak detection if prereqs are met.
+     *
+     * Leak detection is still possible with partial writes,
+     * although to avoid false positives a change should be
+     * marked as soon as it is made in memory, which may
+     * incur some performance overhead. Nevertheless,
+     * leak detection is primarily a debugging tool that
+     * can be useful even if it has certain deficiencies.
+     */
+    if (pvl->leak_cb) {
+        pvl_leak_detection(pvl, partial);
+    }
+
     return 0;
 }
 
@@ -547,8 +547,28 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
     }
 }
 
-static int pvl_leak_detection(pvl_t* pvl) {
-    // TODO :)
+static int pvl_leak_detection(pvl_t* pvl, int partial) {
+    // TODO - don't wait for mirror application, work with marks
     (void)(pvl);
+    (void)(partial);
+    size_t in_diff = 0;
+    size_t start = 0;
+    for (size_t i = 0; i <= pvl->length; i++) {
+        if (in_diff) {
+            if (pvl->main[i] == pvl->mirror[i]) { //diff over
+                // report diff
+                (pvl->leak_cb)(pvl, (pvl->main)+start, i-start, partial);
+                // clear trackers
+                in_diff = 0;
+                start = 0;
+            } // else do nothing
+        } else {
+            if (pvl->main[i] != pvl->mirror[i]) { //diff starts
+                // set trackers
+                in_diff = 1;
+                start = i;
+            } // else do nothing
+        }
+    }
     return 0;
 }
