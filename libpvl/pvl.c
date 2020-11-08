@@ -65,6 +65,7 @@ size_t pvl_sizeof_pvl_t(size_t marks) {
 static int pvl_load(pvl_t* pvl, int initial, FILE* req_from, long req_pos);
 static int pvl_save(pvl_t* pvl, int partial);
 static void pvl_clear_marks(pvl_t* pvl);
+static void pvl_clear_memory(pvl_t* pvl);
 static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag);
 static int pvl_leak_detection(pvl_t* pvl);
 
@@ -85,11 +86,10 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
 
     pvl_t* pvl = (pvl_t*) at;
 
-    // Ensure we don't have garbage. The sizeof operator will not
+    // Ensure we don't have garbage. The custom sizeof function will
     // account for the flexible array at the end of the structure,
-    // call pvl_clear_marks to ensure it is also cleaned.
+    // so there is no need to call pvl_clear_marks.
     memset(pvl, 0, pvl_sizeof_pvl_t(marks));
-    pvl_clear_marks(pvl); // TODO is this needed ?
 
     if (marks == 0) {
         return NULL;
@@ -106,9 +106,6 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
     }
     pvl->length = length;
 
-    // Clear the main memory
-    memset(pvl->main, 0, pvl->length);
-
     if (mirror != NULL) {
         // Check for main/mirror overlap
         if (((mirror <= main) && ((mirror+length) > main)) ||
@@ -116,10 +113,10 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
             return NULL;
         }
         pvl->mirror = mirror;
-
-        // Clear the mirror
-        memset(pvl->mirror, 0, pvl->length);
     }
+
+    // Clear the main memory
+    pvl_clear_memory(pvl);
 
     // Callbacks are checked at call sites
     pvl->pre_load_cb = pre_load_cb;
@@ -245,9 +242,16 @@ int pvl_rollback(pvl_t* pvl) {
     } // else
     pvl_clear_marks(pvl);
     pvl->in_transaction = 0;
-    // Clear the main memory
-    memset(pvl->main, 0, pvl->length);
+    pvl_clear_memory(pvl);
+
     return pvl_load(pvl, 1, pvl->last_save_file, pvl->last_save_pos);
+}
+
+static void pvl_clear_memory(pvl_t* pvl) {
+    memset(pvl->main, 0, pvl->length);
+    if (pvl->mirror) {
+        memset(pvl->mirror, 0, pvl->length);
+    }
 }
 
 static void pvl_clear_marks(pvl_t* pvl) {
