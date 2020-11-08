@@ -33,10 +33,17 @@ typedef struct {
     size_t    length;
 } pvl_change_t;
 
+typedef size_t (*fread_ptr)(void *ptr, size_t size, size_t nmemb, FILE *stream);
+typedef size_t (*fwrite_ptr)(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+typedef int (*fflush_ptr)(FILE *stream);
+
 struct pvl_s {
     char*          main;
     char*          mirror;
     size_t         length;
+    fread_ptr      fread;
+    fwrite_ptr     fwrite;
+    fflush_ptr     fflush;
     pre_load_cb_t  pre_load_cb;
     post_load_cb_t post_load_cb;
     pre_save_cb_t  pre_save_cb;
@@ -122,6 +129,10 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
     pvl->post_save_cb = post_save_cb;
 
     pvl->leak_cb = leak_cb;
+
+    pvl->fread=fread;
+    pvl->fwrite=fwrite;
+    pvl->fflush=fflush;
 
     // Perform initial load
     if (pvl_load(pvl, 1, NULL, 0) != 0) {
@@ -369,7 +380,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
     pvl_change_header_t change_header = {0};
     change_header.partial = partial;
     change_header.change_count = pvl->marks_index;
-    if (fwrite(&change_header, sizeof(pvl_change_header_t), 1, file) != 1) {
+    if (pvl->fwrite(&change_header, sizeof(pvl_change_header_t), 1, file) != 1) {
         (pvl->post_save_cb)(pvl, full, total, file, 1);
         return 1;
     }
@@ -381,11 +392,11 @@ static int pvl_save(pvl_t* pvl, int partial) {
         pvl_change_t change = {0};
         change.start = pvl->marks[i].start - pvl->main;
         change.length = pvl->marks[i].length;
-        if (fwrite(&change, sizeof(pvl_change_t), 1, file) != 1) {
+        if (pvl->fwrite(&change, sizeof(pvl_change_t), 1, file) != 1) {
             (pvl->post_save_cb)(pvl, full, total, file, 1);
             return 1;
         }
-        if (fwrite(pvl->marks[i].start, pvl->marks[i].length, 1, file) != 1) {
+        if (pvl->fwrite(pvl->marks[i].start, pvl->marks[i].length, 1, file) != 1) {
             (pvl->post_save_cb)(pvl, full, total, file, 1);
             return 1;
         }
@@ -394,7 +405,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
     /*
      * Flush, as buffered data may otherwise be lost
      */
-    if (fflush(file)) {
+    if (pvl->fflush(file)) {
         (pvl->post_save_cb)(pvl, full, total, file, 1);
         return 1;
     }
@@ -473,7 +484,7 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
         pvl_change_header_t change_header = {0};
         last_good_pos = ftell(file);
 
-        if (fread(&change_header, sizeof(pvl_change_header_t), 1, file) != 1) {
+        if (pvl->fread(&change_header, sizeof(pvl_change_header_t), 1, file) != 1) {
             // Couldn't load the change, signal the callback
             if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
                 continue;
@@ -486,14 +497,14 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
          */
         for (size_t i = 0; i < change_header.change_count; i++) {
             pvl_change_t change = {0};
-            if (fread(&change, sizeof(pvl_change_t), 1, file) != 1) {
+            if (pvl->fread(&change, sizeof(pvl_change_t), 1, file) != 1) {
                 // Couldn't load the change, signal the callback
                 if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
                     continue;
                 }
                 return 1;
             }
-            if (fread(pvl->main+change.start, change.length, 1, file) != 1) {
+            if (pvl->fread(pvl->main+change.start, change.length, 1, file) != 1) {
                 // Couldn't load the change, signal the callback
                 if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
                     continue;
