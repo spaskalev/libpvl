@@ -465,8 +465,15 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
 
     FILE *file;
     long last_good_pos = 0;
+    int reset_load = 0;
 
     while (1) {
+        if (reset_load) {
+            initial = 1;
+            reset_load = 0;
+            pvl_clear_memory(pvl);
+        }
+
         /*
          * Call the pre-load callback.
          */
@@ -491,6 +498,7 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
         if (pvl->fread(&change_header, sizeof(pvl_change_header_t), 1, file) != 1) {
             // Couldn't load the change, signal the callback
             if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
+                reset_load = 1;
                 continue;
             }
             return 1;
@@ -504,6 +512,7 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
             if (pvl->fread(&change, sizeof(pvl_change_t), 1, file) != 1) {
                 // Couldn't load the change, signal the callback
                 if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
+                    reset_load = 1;
                     continue;
                 }
                 return 1;
@@ -511,6 +520,7 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
             if (pvl->fread(pvl->main+change.start, change.length, 1, file) != 1) {
                 // Couldn't load the change, signal the callback
                 if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
+                    reset_load = 1;
                     continue;
                 }
                 return 1;
