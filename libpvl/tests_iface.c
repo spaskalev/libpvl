@@ -307,6 +307,13 @@ void test_rollback_pvl_null() {
     assert(pvl_rollback(pvl));
 }
 
+void test_rollback_no_begin() {
+    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(1)];
+    char buffer[1024];
+    pvl_t* pvl = pvl_init(pvlbuf, 1, buffer, 512, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(pvl_rollback(pvl));
+}
+
 int main() {
     test_init_misalignment();
     test_init_alignment();
@@ -350,8 +357,8 @@ int main() {
     test_commit_over_max_marks();
 
     test_rollback_pvl_null();
+    test_rollback_no_begin();
     /* test_rollback_no_mark_mirror();
-    test_rollback_no_begin()
     test_rollback_single_mark_mirror();
     test_rollback_max_marks_mirror();
     test_rollback_over_max_marks_mirror();

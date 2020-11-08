@@ -332,9 +332,6 @@ static int pvl_save(pvl_t* pvl, int partial) {
      */
     size_t total = sizeof(pvl_change_header_t);
     for (size_t i = 0; i < pvl->marks_index; i++) {
-        if (pvl->marks[i].start == NULL) {
-            break;
-        }
         total += sizeof(pvl_change_t);
         total += pvl->marks[i].length;
     }
