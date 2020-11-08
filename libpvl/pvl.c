@@ -434,9 +434,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
     /*
      * Signal that the save is done
      */
-    if (pvl->post_save_cb != NULL) {
-        (pvl->post_save_cb)(pvl, full, total, file, 0);
-    }
+    (pvl->post_save_cb)(pvl, full, total, file, 0);
 
     /*
      * Perform leak detection if prereqs are met.
