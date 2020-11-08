@@ -21,7 +21,7 @@ typedef struct {
     pvl_t* expected_pvl;
     FILE*  expected_file;
     int    expected_failed;
-    int    expected_last_good;
+    long   expected_last_good;
 } post_load_ctx;
 
 typedef struct {
@@ -88,6 +88,7 @@ int post_load(pvl_t* pvl, FILE* file, int failed, long last_good) {
     assert(pvl == fix.expected_pvl);
     assert(file == fix.expected_file);
     assert(failed == fix.expected_failed);
+    printf("last_good: %ld expected last_good: %ld\n", last_good, fix.expected_last_good);
     assert(last_good == fix.expected_last_good);
     ctx.post_load_pos++;
     return fix.return_int;
@@ -231,27 +232,39 @@ void test_basic_partial() {
     assert(ctx.post_save_pos == 2);
 
     // Prepare for reading the data
-    /*rewind(ctx.dyn_file);
+    rewind(ctx.dyn_file);
     memset(ctx.pvl_at, 0, 1024);
     memset(ctx.buf, 0, 1024);
 
-    ctx.pre_load.return_file = ctx.dyn_file;
-    ctx.pre_load.expected_pvl = ctx.pvl;
-    ctx.pre_load.expected_initial = 1;
-    ctx.pre_load.expected_file = NULL;
-    ctx.pre_load.expected_up_to_pos = 0;
+    ctx.pre_load[0].return_file = ctx.dyn_file;
+    ctx.pre_load[0].expected_pvl = ctx.pvl;
+    ctx.pre_load[0].expected_initial = 1;
+    ctx.pre_load[0].expected_file = NULL;
+    ctx.pre_load[0].expected_up_to_pos = 0;
 
-    ctx.post_load.return_int = 0;
-    ctx.post_load.expected_pvl = ctx.pvl;
-    ctx.post_load.expected_file = ctx.dyn_file;
-    ctx.post_load.expected_failed = 0;
-    ctx.post_load.expected_last_good = 96;
+    ctx.post_load[0].return_int = 1;
+    ctx.post_load[0].expected_pvl = ctx.pvl;
+    ctx.post_load[0].expected_file = ctx.dyn_file;
+    ctx.post_load[0].expected_failed = 0;
+    ctx.post_load[0].expected_last_good = 64;
+
+    ctx.pre_load[1].return_file = ctx.dyn_file;
+    ctx.pre_load[1].expected_pvl = ctx.pvl;
+    ctx.pre_load[1].expected_initial = 0;
+    ctx.pre_load[1].expected_file = NULL;
+    ctx.pre_load[1].expected_up_to_pos = 0;
+
+    ctx.post_load[1].return_int = 0;
+    ctx.post_load[1].expected_pvl = ctx.pvl;
+    ctx.post_load[1].expected_file = ctx.dyn_file;
+    ctx.post_load[1].expected_failed = 0;
+    ctx.post_load[1].expected_last_good = 160;
 
     // Create a new pvl to load the data
     ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, pre_load, post_load, NULL, NULL, NULL);
 
-    assert(ctx.pre_load.call_count == 1);
-    assert(ctx.post_load.call_count == 1);
+    assert(ctx.pre_load_pos == 2);
+    assert(ctx.post_load_pos == 2);
 
     // Verify it
     for (size_t i = 0; i < 1024; i++) {
@@ -260,7 +273,7 @@ void test_basic_partial() {
         } else {
             assert(ctx.buf[i] == 0);
         }
-    }*/
+    }
 
     assert(!fclose(ctx.dyn_file));
     free(ctx.dyn_buf);

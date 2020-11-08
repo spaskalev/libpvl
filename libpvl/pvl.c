@@ -456,6 +456,11 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
          */
         file = (pvl->pre_load_cb)(pvl, initial, up_to_src, up_to_pos);
 
+        if (initial) {
+            // Only the first read in a sequence should be indicated as initial
+            initial = 0;
+        }
+
         if (!file) {
             // Nothing to load
             return 0;
