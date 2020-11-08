@@ -11,8 +11,8 @@ typedef struct {
 
     pvl_t* expected_pvl;
     int    expected_initial;
-    FILE*  expected_file;
-    int    expected_up_to_pos;
+    FILE*  expected_up_to_src;
+    long   expected_up_to_pos;
 } pre_load_ctx;
 
 typedef struct {
@@ -74,48 +74,67 @@ typedef struct {
 test_ctx ctx;
 
 FILE* pre_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
+    printf("\n [pre_load] [%d] \n", ctx.pre_load_pos);
     pre_load_ctx fix = ctx.pre_load[ctx.pre_load_pos];
+    printf("      pvl: %p expected: %p\n", (void*) pvl, (void*) fix.expected_pvl);
     assert(pvl == fix.expected_pvl);
+    printf("  initial: %d expected: %d\n", initial, fix.expected_initial);
     assert(initial == fix.expected_initial);
-    assert(up_to_src == fix.expected_file);
+    printf("up_to_src: %p expected: %p\n", (void*) up_to_src, (void*) fix.expected_up_to_src);
+    assert(up_to_src == fix.expected_up_to_src);
+    printf("up_to_pos: %ld expected: %ld\n", up_to_pos, fix.expected_up_to_pos);
     assert(up_to_pos == fix.expected_up_to_pos);
     ctx.pre_load_pos++;
     return fix.return_file;
 }
 
 int post_load(pvl_t* pvl, FILE* file, int failed, long last_good) {
+    printf("\n[post_load] [%d] \n", ctx.post_load_pos);
     post_load_ctx fix = ctx.post_load[ctx.post_load_pos];
+    printf("      pvl: %p expected: %p\n", (void*) pvl, (void*) fix.expected_pvl);
     assert(pvl == fix.expected_pvl);
+    printf("     file: %p expected: %p\n", (void*) file, (void*) fix.expected_file);
     assert(file == fix.expected_file);
+    printf("   failed: %d expected: %d\n", failed, fix.expected_failed);
     assert(failed == fix.expected_failed);
-    printf("last_good: %ld expected last_good: %ld\n", last_good, fix.expected_last_good);
+    printf("last_good: %ld expected: %ld\n", last_good, fix.expected_last_good);
     assert(last_good == fix.expected_last_good);
     ctx.post_load_pos++;
     return fix.return_int;
 }
 
 FILE* pre_save(pvl_t* pvl, int full, size_t length) {
+    printf("\n [pre_save] [%d] \n", ctx.pre_save_pos);
     pre_save_ctx fix = ctx.pre_save[ctx.pre_save_pos];
+    printf("   pvl: %p expected: %p\n", (void*) pvl, (void*) fix.expected_pvl);
     assert(pvl == fix.expected_pvl);
+    printf("  full: %d expected: %d\n", full, fix.expected_full);
     assert(full == fix.expected_full);
-    printf("%lu\n",length);
+    printf("length: %ld expected: %ld\n", length, fix.expected_length);
     assert(length == fix.expected_length);
     ctx.pre_save_pos++;
     return fix.return_file;
 }
 
 int post_save(pvl_t* pvl, int full, size_t length, FILE* file, int failed) {
+    printf("\n[post_save] [%d] \n", ctx.post_save_pos);
     post_save_ctx fix = ctx.post_save[ctx.post_save_pos];
+    printf("   pvl: %p expected: %p\n", (void*) pvl, (void*) fix.expected_pvl);
     assert(pvl == fix.expected_pvl);
+    printf("  full: %d expected: %d\n", full, fix.expected_full);
     assert(full == fix.expected_full);
+    printf("length: %ld expected: %ld\n", length, fix.expected_length);
     assert(length == fix.expected_length);
+    printf("  file: %p expected: %p\n", (void*) file, (void*) fix.expected_file);
     assert(file == fix.expected_file);
+    printf("failed: %d expected: %d\n", failed, fix.expected_failed);
     assert(failed == fix.expected_failed);
     ctx.post_save_pos++;
     return fix.return_int;
 }
 
 void test_basic_commit() {
+    printf("\n[test_basic_commit]\n");
     int written_length = 96;
     int marks_count = 10;
 
@@ -155,7 +174,7 @@ void test_basic_commit() {
     ctx.pre_load[0].return_file = ctx.dyn_file;
     ctx.pre_load[0].expected_pvl = ctx.pvl;
     ctx.pre_load[0].expected_initial = 1;
-    ctx.pre_load[0].expected_file = NULL;
+    ctx.pre_load[0].expected_up_to_src = NULL;
     ctx.pre_load[0].expected_up_to_pos = 0;
 
     ctx.post_load[0].return_int = 0;
@@ -184,6 +203,7 @@ void test_basic_commit() {
 }
 
 void test_basic_commit_mirror() {
+    printf("\n[test_basic_commit_mirror]\n");
     int written_length = 96;
     int marks_count = 10;
 
@@ -224,7 +244,7 @@ void test_basic_commit_mirror() {
     ctx.pre_load[0].return_file = ctx.dyn_file;
     ctx.pre_load[0].expected_pvl = ctx.pvl;
     ctx.pre_load[0].expected_initial = 1;
-    ctx.pre_load[0].expected_file = NULL;
+    ctx.pre_load[0].expected_up_to_src = NULL;
     ctx.pre_load[0].expected_up_to_pos = 0;
 
     ctx.post_load[0].return_int = 0;
@@ -253,6 +273,7 @@ void test_basic_commit_mirror() {
 }
 
 void test_basic_commit_partial() {
+    printf("\n[test_basic_commit_partial]\n");
     int marks_count = 1;
 
     ctx = (test_ctx){0};
@@ -308,7 +329,7 @@ void test_basic_commit_partial() {
     ctx.pre_load[0].return_file = ctx.dyn_file;
     ctx.pre_load[0].expected_pvl = ctx.pvl;
     ctx.pre_load[0].expected_initial = 1;
-    ctx.pre_load[0].expected_file = NULL;
+    ctx.pre_load[0].expected_up_to_src = NULL;
     ctx.pre_load[0].expected_up_to_pos = 0;
 
     ctx.post_load[0].return_int = 1;
@@ -320,7 +341,7 @@ void test_basic_commit_partial() {
     ctx.pre_load[1].return_file = ctx.dyn_file;
     ctx.pre_load[1].expected_pvl = ctx.pvl;
     ctx.pre_load[1].expected_initial = 0;
-    ctx.pre_load[1].expected_file = NULL;
+    ctx.pre_load[1].expected_up_to_src = NULL;
     ctx.pre_load[1].expected_up_to_pos = 0;
 
     ctx.post_load[1].return_int = 0;
@@ -349,6 +370,7 @@ void test_basic_commit_partial() {
 }
 
 void test_basic_commit_partial_mirror() {
+    printf("\n[test_basic_commit_partial_mirror]\n");
     int marks_count = 1;
 
     ctx = (test_ctx){0};
@@ -405,7 +427,7 @@ void test_basic_commit_partial_mirror() {
     ctx.pre_load[0].return_file = ctx.dyn_file;
     ctx.pre_load[0].expected_pvl = ctx.pvl;
     ctx.pre_load[0].expected_initial = 1;
-    ctx.pre_load[0].expected_file = NULL;
+    ctx.pre_load[0].expected_up_to_src = NULL;
     ctx.pre_load[0].expected_up_to_pos = 0;
 
     ctx.post_load[0].return_int = 1;
@@ -417,7 +439,7 @@ void test_basic_commit_partial_mirror() {
     ctx.pre_load[1].return_file = ctx.dyn_file;
     ctx.pre_load[1].expected_pvl = ctx.pvl;
     ctx.pre_load[1].expected_initial = 0;
-    ctx.pre_load[1].expected_file = NULL;
+    ctx.pre_load[1].expected_up_to_src = NULL;
     ctx.pre_load[1].expected_up_to_pos = 0;
 
     ctx.post_load[1].return_int = 0;
@@ -446,6 +468,7 @@ void test_basic_commit_partial_mirror() {
 }
 
 void test_basic_rollback() {
+    printf("\n[test_basic_rollback]\n");
     int written_length = 96;
     int marks_count = 10;
 
@@ -457,7 +480,7 @@ void test_basic_rollback() {
     ctx.pre_load[0].return_file = NULL;
     ctx.pre_load[0].expected_pvl = pvl;
     ctx.pre_load[0].expected_initial = 1;
-    ctx.pre_load[0].expected_file = NULL;
+    ctx.pre_load[0].expected_up_to_src = NULL;
     ctx.pre_load[0].expected_up_to_pos = 0;
 
     ctx.post_load[0].return_int = 0;
@@ -487,7 +510,7 @@ void test_basic_rollback() {
     ctx.pre_load[1].return_file = NULL;
     ctx.pre_load[1].expected_pvl = pvl;
     ctx.pre_load[1].expected_initial = 1;
-    ctx.pre_load[1].expected_file = NULL;
+    ctx.pre_load[1].expected_up_to_src = NULL;
     ctx.pre_load[1].expected_up_to_pos = 0;
 
     ctx.post_load[1].return_int = 0;
@@ -517,6 +540,7 @@ void test_basic_rollback() {
 }
 
 void test_basic_rollback_mirror() {
+    printf("\n[test_basic_rollback_mirror]\n");
     int written_length = 96;
     int marks_count = 10;
 
@@ -528,7 +552,7 @@ void test_basic_rollback_mirror() {
     ctx.pre_load[0].return_file = NULL;
     ctx.pre_load[0].expected_pvl = pvl;
     ctx.pre_load[0].expected_initial = 1;
-    ctx.pre_load[0].expected_file = NULL;
+    ctx.pre_load[0].expected_up_to_src = NULL;
     ctx.pre_load[0].expected_up_to_pos = 0;
 
     ctx.post_load[0].return_int = 0;
@@ -577,6 +601,79 @@ void test_basic_rollback_mirror() {
 }
 
 void test_basic_rollback_partial() {
+    printf("\n[test_basic_rollback_partial]\n");
+    int marks_count = 1; // To trigger partial writes
+
+    ctx = (test_ctx){0};
+
+    // To break a circular dependency :)
+    pvl_t* pvl = (pvl_t*)ctx.pvl_at;
+
+    ctx.pre_load[0].return_file = NULL;
+    ctx.pre_load[0].expected_pvl = pvl;
+    ctx.pre_load[0].expected_initial = 1;
+    ctx.pre_load[0].expected_up_to_src = NULL;
+    ctx.pre_load[0].expected_up_to_pos = 0;
+
+    ctx.post_load[0].return_int = 0;
+    ctx.post_load[0].expected_pvl = pvl;
+    ctx.post_load[0].expected_file = NULL;
+    ctx.post_load[0].expected_failed = 0;
+    ctx.post_load[0].expected_last_good = 0;
+
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, pre_load, post_load, pre_save, post_save, NULL);
+    assert(ctx.pvl != NULL);
+
+    ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
+
+    ctx.pre_save[0].return_file = ctx.dyn_file;
+    ctx.pre_save[0].expected_pvl = ctx.pvl;
+    ctx.pre_save[0].expected_full = 0;
+    ctx.pre_save[0].expected_length = 64;
+
+    ctx.post_save[0].return_int = 0;
+    ctx.post_save[0].expected_pvl = ctx.pvl;
+    ctx.post_save[0].expected_full = 0;
+    ctx.post_save[0].expected_length = 64;
+    ctx.post_save[0].expected_file = ctx.dyn_file;
+    ctx.post_save[0].expected_failed = 0;
+
+    // Second load
+    ctx.pre_load[1].return_file = NULL;
+    ctx.pre_load[1].expected_pvl = pvl;
+    ctx.pre_load[1].expected_initial = 1;
+    ctx.pre_load[1].expected_up_to_src = NULL;
+    ctx.pre_load[1].expected_up_to_pos = 0;
+
+    ctx.post_load[0].return_int = 0;
+    ctx.post_load[0].expected_pvl = pvl;
+    ctx.post_load[0].expected_file = NULL;
+    ctx.post_load[0].expected_failed = 0;
+    ctx.post_load[0].expected_last_good = 0;
+
+    // Write some data and rollback
+    assert(!pvl_begin(ctx.pvl));
+    memset(ctx.buf, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.buf, 32));
+    assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
+
+    // Prep for reading
+    rewind(ctx.dyn_file);
+
+    assert(!pvl_rollback(ctx.pvl));
+
+    assert(ctx.pre_save_pos == 1);
+    assert(ctx.post_save_pos == 1);
+    assert(ctx.pre_load_pos == 2);
+    assert(ctx.post_load_pos == 0);
+
+    // Verify it
+    for (size_t i = 0; i < 1024; i++) {
+        assert(ctx.buf[i] == 0);
+    }
+
+    assert(!fclose(ctx.dyn_file));
+    free(ctx.dyn_buf);
 }
 
 void test_basic_rollback_partil_mirror() {
