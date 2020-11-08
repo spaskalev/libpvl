@@ -82,7 +82,7 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
     // account for the flexible array at the end of the structure,
     // call pvl_clear_marks to ensure it is also cleaned.
     memset(pvl, 0, pvl_sizeof_pvl_t(marks));
-    pvl_clear_marks(pvl);
+    pvl_clear_marks(pvl); // TODO is this needed ?
 
     if (marks == 0) {
         return NULL;
@@ -99,6 +99,9 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
     }
     pvl->length = length;
 
+    // Clear the main memory
+    memset(pvl->main, 0, pvl->length);
+
     if (mirror != NULL) {
         // Check for main/mirror overlap
         if (((mirror <= main) && ((mirror+length) > main)) ||
@@ -106,6 +109,9 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
             return NULL;
         }
         pvl->mirror = mirror;
+
+        // Clear the mirror
+        memset(pvl->mirror, 0, pvl->length);
     }
 
     // Callbacks are checked at call sites
@@ -228,6 +234,8 @@ int pvl_rollback(pvl_t* pvl) {
     } // else
     pvl_clear_marks(pvl);
     pvl->in_transaction = 0;
+    // Clear the main memory
+    memset(pvl->main, 0, pvl->length);
     return pvl_load(pvl, 1, pvl->last_save_file, pvl->last_save_pos);
 }
 

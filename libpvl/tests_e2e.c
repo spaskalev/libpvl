@@ -115,7 +115,7 @@ int post_save(pvl_t* pvl, int full, size_t length, FILE* file, int failed) {
     return fix.return_int;
 }
 
-void test_basic() {
+void test_basic_commit() {
     int written_length = 96;
     int marks_count = 10;
 
@@ -183,7 +183,7 @@ void test_basic() {
     free(ctx.dyn_buf);
 }
 
-void test_basic_mirror() {
+void test_basic_commit_mirror() {
     int written_length = 96;
     int marks_count = 10;
 
@@ -252,7 +252,7 @@ void test_basic_mirror() {
     free(ctx.dyn_buf);
 }
 
-void test_basic_partial() {
+void test_basic_commit_partial() {
     int marks_count = 1;
 
     ctx = (test_ctx){0};
@@ -348,7 +348,7 @@ void test_basic_partial() {
     free(ctx.dyn_buf);
 }
 
-void test_basic_partial_mirror() {
+void test_basic_commit_partial_mirror() {
     int marks_count = 1;
 
     ctx = (test_ctx){0};
@@ -439,6 +439,77 @@ void test_basic_partial_mirror() {
         } else {
             assert(ctx.buf[i] == 0);
         }
+    }
+
+    assert(!fclose(ctx.dyn_file));
+    free(ctx.dyn_buf);
+}
+
+void test_basic_rollback() {
+    int written_length = 96;
+    int marks_count = 10;
+
+    ctx = (test_ctx){0};
+
+    // To break a circular dependency :)
+    pvl_t* pvl = (pvl_t*)ctx.pvl_at;
+
+    ctx.pre_load[0].return_file = NULL;
+    ctx.pre_load[0].expected_pvl = pvl;
+    ctx.pre_load[0].expected_initial = 1;
+    ctx.pre_load[0].expected_file = NULL;
+    ctx.pre_load[0].expected_up_to_pos = 0;
+
+    ctx.post_load[0].return_int = 0;
+    ctx.post_load[0].expected_pvl = pvl;
+    ctx.post_load[0].expected_file = NULL;
+    ctx.post_load[0].expected_failed = 0;
+    ctx.post_load[0].expected_last_good = 0;
+
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, pre_load, post_load, pre_save, post_save, NULL);
+    assert(ctx.pvl != NULL);
+
+    ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
+
+    ctx.pre_save[0].return_file = ctx.dyn_file;
+    ctx.pre_save[0].expected_pvl = ctx.pvl;
+    ctx.pre_save[0].expected_full = 0;
+    ctx.pre_save[0].expected_length = 0;
+
+    ctx.post_save[0].return_int = 0;
+    ctx.post_save[0].expected_pvl = ctx.pvl;
+    ctx.post_save[0].expected_full = 0;
+    ctx.post_save[0].expected_length = written_length;
+    ctx.post_save[0].expected_file = ctx.dyn_file;
+    ctx.post_save[0].expected_failed = 0;
+
+    // Second load
+    ctx.pre_load[1].return_file = NULL;
+    ctx.pre_load[1].expected_pvl = pvl;
+    ctx.pre_load[1].expected_initial = 1;
+    ctx.pre_load[1].expected_file = NULL;
+    ctx.pre_load[1].expected_up_to_pos = 0;
+
+    ctx.post_load[1].return_int = 0;
+    ctx.post_load[1].expected_pvl = pvl;
+    ctx.post_load[1].expected_file = NULL;
+    ctx.post_load[1].expected_failed = 0;
+    ctx.post_load[1].expected_last_good = 0;
+
+    // Write some data and rollback
+    assert(!pvl_begin(ctx.pvl));
+    memset(ctx.buf, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
+    assert(!pvl_rollback(ctx.pvl));
+
+    assert(ctx.pre_save_pos == 0);
+    assert(ctx.post_save_pos == 0);
+    assert(ctx.pre_load_pos == 2);
+    assert(ctx.post_load_pos == 0);
+
+    // Verify it
+    for (size_t i = 0; i < 1024; i++) {
+        assert(ctx.buf[i] == 0);
     }
 
     assert(!fclose(ctx.dyn_file));
@@ -471,12 +542,22 @@ void test_basic_rollback_mirror() {
     }
 }
 
+void test_basic_rollback_partial() {
+}
+
+void test_basic_rollback_partil_mirror() {
+}
+
 int main() {
-    test_basic();
-    test_basic_mirror();
+    test_basic_commit();
+    test_basic_commit_mirror();
 
-    test_basic_partial();
-    test_basic_partial_mirror();
+    test_basic_commit_partial();
+    test_basic_commit_partial_mirror();
 
+    test_basic_rollback();
     test_basic_rollback_mirror();
+
+    test_basic_rollback_partial();
+    test_basic_rollback_partil_mirror();
 }
