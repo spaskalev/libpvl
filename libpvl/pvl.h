@@ -71,7 +71,7 @@ typedef FILE* (*pre_load_cb_t)(pvl_t* pvl, int initial, FILE* up_to_src, long up
  *
  * int                - Indicates whether change loading should continue.
  */
-typedef int (*post_load_cb_t)(pvl_t* pvl, FILE* file, int failed, long fpos);
+typedef int (*post_load_cb_t)(pvl_t* pvl, FILE* file, int failed, long last_good);
 
 /*
  * Callback for preparing to persist a change
