@@ -742,6 +742,45 @@ void test_pvl_save_error_fail_flush() {
     assert(!fclose(save_dest));
 }
 
+void test_pvl_save_error_fail_partial() {
+    printf("\n[test_pvl_save_error_fail_partial]\n");
+    int written_length = 64;
+    int marks_count = 1;
+
+    ctx = (test_ctx){0};
+
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    assert(ctx.pvl != NULL);
+
+    char buffer[1024];
+    FILE* save_dest = fmemopen(buffer,sizeof(pvl_change_header_t)+sizeof(pvl_change_t),"w+");
+    // Leave unbufferred so that it fails at fflush
+    //setbuf(save_dest, NULL);
+
+    ctx.pre_save[0].return_file = save_dest;
+    ctx.pre_save[0].expected_pvl = ctx.pvl;
+    ctx.pre_save[0].expected_full = 0;
+    ctx.pre_save[0].expected_length = written_length;
+
+    ctx.post_save[0].return_int = 0;
+    ctx.post_save[0].expected_pvl = ctx.pvl;
+    ctx.post_save[0].expected_full = 0;
+    ctx.post_save[0].expected_length = written_length;
+    ctx.post_save[0].expected_file = save_dest;
+    ctx.post_save[0].expected_failed = 1;
+
+    // Write and commit some data
+    assert(!pvl_begin(ctx.pvl));
+    memset(ctx.buf, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.buf, 32));
+    assert(pvl_mark(ctx.pvl, ctx.buf, 64));
+
+    assert(ctx.pre_save_pos == 1);
+    assert(ctx.post_save_pos == 1);
+
+    assert(!fclose(save_dest));
+}
+
 void test_pvl_save_no_destination() {
     printf("\n[test_pvl_save_no_destination]\n");
     int written_length = 96;
@@ -800,6 +839,7 @@ int main() {
     test_pvl_save_error_fail_02();
     test_pvl_save_error_fail_03();
     test_pvl_save_error_fail_flush();
+    test_pvl_save_error_fail_partial();
 
     test_pvl_save_no_destination();
 
