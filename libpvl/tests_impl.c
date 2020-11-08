@@ -131,7 +131,7 @@ void test_pvl_mark_compare_equal() {
     assert(pvl_mark_compare(&a, &b) == 0);
 }
 
-void test_pvl_init_initial_load_error() {
+void test_pvl_init_initial_load_error_01() {
     printf("\n[test_pvl_init_initial_load_error]\n");
     int marks_count = 10;
 
@@ -162,6 +162,73 @@ void test_pvl_init_initial_load_error() {
 
     //assert(!fclose(ctx.dyn_file));
     //free(ctx.dyn_buf);
+}
+
+void test_pvl_init_initial_load_error_02() {
+    printf("\n[test_pvl_init_initial_load_error_02]\n");
+    int written_length = 96;
+    int marks_count = 10;
+
+    ctx = (test_ctx){0};
+
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    assert(ctx.pvl != NULL);
+
+    ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
+
+    ctx.pre_save[0].return_file = ctx.dyn_file;
+    ctx.pre_save[0].expected_pvl = ctx.pvl;
+    ctx.pre_save[0].expected_full = 0;
+    ctx.pre_save[0].expected_length = written_length;
+
+    ctx.post_save[0].return_int = 0;
+    ctx.post_save[0].expected_pvl = ctx.pvl;
+    ctx.post_save[0].expected_full = 0;
+    ctx.post_save[0].expected_length = written_length;
+    ctx.post_save[0].expected_file = ctx.dyn_file;
+    ctx.post_save[0].expected_failed = 0;
+
+    // Write and commit some data
+    assert(!pvl_begin(ctx.pvl));
+    memset(ctx.buf, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
+    assert(!pvl_commit(ctx.pvl));
+
+    assert(ctx.pre_save_pos == 1);
+    assert(ctx.post_save_pos == 1);
+
+    // Prepare for reading the data
+    rewind(ctx.dyn_file);
+    memset(ctx.pvl_at, 0, 1024);
+    memset(ctx.buf, 0, 1024);
+    memset(ctx.mirror, 0, 1024);
+
+    // Read from a capped buffer
+    FILE* load_src = fmemopen(ctx.dyn_buf,sizeof(pvl_change_header_t),"r");
+    printf("%d\n", errno);
+    assert(load_src);
+
+    ctx.pre_load[0].return_file = load_src;
+    ctx.pre_load[0].expected_pvl = ctx.pvl;
+    ctx.pre_load[0].expected_initial = 1;
+    ctx.pre_load[0].expected_up_to_src = NULL;
+    ctx.pre_load[0].expected_up_to_pos = 0;
+
+    ctx.post_load[0].return_int = 0;
+    ctx.post_load[0].expected_pvl = ctx.pvl;
+    ctx.post_load[0].expected_file = load_src;
+    ctx.post_load[0].expected_failed = 1;
+    ctx.post_load[0].expected_last_good = 0;
+
+    // Create a new pvl to load the data
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
+    assert(ctx.pvl == NULL);
+
+    assert(ctx.pre_load_pos == 1);
+    assert(ctx.post_load_pos == 1);
+
+    assert(!fclose(ctx.dyn_file));
+    free(ctx.dyn_buf);
 }
 
 void test_pvl_save_no_destination() {
@@ -209,7 +276,8 @@ int main() {
     test_pvl_mark_compare_first_smaller();
     test_pvl_mark_compare_equal();
 
-    test_pvl_init_initial_load_error();
+    test_pvl_init_initial_load_error_01();
+    test_pvl_init_initial_load_error_02();
 
     test_pvl_save_no_destination();
 
