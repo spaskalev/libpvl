@@ -517,12 +517,44 @@ void test_basic_rollback() {
 }
 
 void test_basic_rollback_mirror() {
+    int written_length = 96;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    // To break a circular dependency :)
+    pvl_t* pvl = (pvl_t*)ctx.pvl_at;
+
+    ctx.pre_load[0].return_file = NULL;
+    ctx.pre_load[0].expected_pvl = pvl;
+    ctx.pre_load[0].expected_initial = 1;
+    ctx.pre_load[0].expected_file = NULL;
+    ctx.pre_load[0].expected_up_to_pos = 0;
+
+    ctx.post_load[0].return_int = 0;
+    ctx.post_load[0].expected_pvl = pvl;
+    ctx.post_load[0].expected_file = NULL;
+    ctx.post_load[0].expected_failed = 0;
+    ctx.post_load[0].expected_last_good = 0;
+
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
+
+    ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
+
+    ctx.pre_save[0].return_file = ctx.dyn_file;
+    ctx.pre_save[0].expected_pvl = ctx.pvl;
+    ctx.pre_save[0].expected_full = 0;
+    ctx.pre_save[0].expected_length = 0;
+
+    ctx.post_save[0].return_int = 0;
+    ctx.post_save[0].expected_pvl = ctx.pvl;
+    ctx.post_save[0].expected_full = 0;
+    ctx.post_save[0].expected_length = written_length;
+    ctx.post_save[0].expected_file = ctx.dyn_file;
+    ctx.post_save[0].expected_failed = 0;
+
+    // No second load expected due to the mirror
 
     // Write some data and rollback
     assert(!pvl_begin(ctx.pvl));
@@ -532,14 +564,16 @@ void test_basic_rollback_mirror() {
 
     assert(ctx.pre_save_pos == 0);
     assert(ctx.post_save_pos == 0);
-
-    assert(ctx.pre_load_pos == 0);
+    assert(ctx.pre_load_pos == 1);
     assert(ctx.post_load_pos == 0);
 
     // Verify it
     for (size_t i = 0; i < 1024; i++) {
         assert(ctx.buf[i] == 0);
     }
+
+    assert(!fclose(ctx.dyn_file));
+    free(ctx.dyn_buf);
 }
 
 void test_basic_rollback_partial() {
