@@ -219,6 +219,7 @@ void test_basic_mirror() {
     rewind(ctx.dyn_file);
     memset(ctx.pvl_at, 0, 1024);
     memset(ctx.buf, 0, 1024);
+    memset(ctx.mirror, 0, 1024);
 
     ctx.pre_load[0].return_file = ctx.dyn_file;
     ctx.pre_load[0].expected_pvl = ctx.pvl;
@@ -233,7 +234,7 @@ void test_basic_mirror() {
     ctx.post_load[0].expected_last_good = written_length;
 
     // Create a new pvl to load the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, pre_load, post_load, NULL, NULL, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
 
     assert(ctx.pre_load_pos == 1);
     assert(ctx.post_load_pos == 1);
@@ -399,6 +400,7 @@ void test_basic_partial_mirror() {
     rewind(ctx.dyn_file);
     memset(ctx.pvl_at, 0, 1024);
     memset(ctx.buf, 0, 1024);
+    memset(ctx.mirror, 0, 1024);
 
     ctx.pre_load[0].return_file = ctx.dyn_file;
     ctx.pre_load[0].expected_pvl = ctx.pvl;
@@ -425,7 +427,7 @@ void test_basic_partial_mirror() {
     ctx.post_load[1].expected_last_good = 160;
 
     // Create a new pvl to load the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, pre_load, post_load, NULL, NULL, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
 
     assert(ctx.pre_load_pos == 2);
     assert(ctx.post_load_pos == 2);
