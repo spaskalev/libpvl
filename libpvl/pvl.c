@@ -59,8 +59,9 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *req_from, long req_pos);
 static int pvl_save(struct pvl *pvl, int partial);
 static void pvl_clear_marks(struct pvl *pvl);
 static void pvl_clear_memory(struct pvl *pvl);
-static void pvl_coalesce_marks(struct pvl *pvl, int *coalesced_flag);
-static int pvl_leak_detection(struct pvl *pvl, int partial);
+static int pvl_coalesce_marks(struct pvl *pvl);
+static void pvl_detect_leaks(struct pvl *pvl, int partial);
+static void pvl_detect_leaks_inner(struct pvl *pvl, int partial, size_t from, size_t to);
 
 struct pvl *pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
     pre_load_callback pre_load_cb, post_load_callback post_load_cb,
@@ -167,9 +168,7 @@ int pvl_mark(struct pvl *pvl, char *start, size_t length) {
         pvl->marks_index++;
     } else {
         // Marks are full, need to coalesce them
-        int coalesced = 0;
-        pvl_coalesce_marks(pvl, &coalesced);
-        if (coalesced) {
+        if (pvl_coalesce_marks(pvl)) {
             // Recurse - this add will pass since at least one mark was coalesced
             return pvl_mark(pvl, start, length);
         }
@@ -195,7 +194,17 @@ int pvl_commit(struct pvl *pvl) {
         return 1;
     }
 
+    /*
+     * Commit may not be called outside of a transaction
+     */
     if (!pvl->in_transaction) {
+        return 1;
+    }
+
+    /*
+     * Commit may not be called without marks
+     */
+    if (! pvl->marks_index) {
         return 1;
     }
 
@@ -261,7 +270,7 @@ static int pvl_mark_compare(const void *a, const void *b) {
     return 0;
 }
 
-static void pvl_coalesce_marks(struct pvl *pvl, int *coalesced_flag) {
+static int pvl_coalesce_marks(struct pvl *pvl) {
     int coalesced = 0;
     qsort(pvl->marks, pvl->marks_index, sizeof(mark), pvl_mark_compare);
     for (size_t i = 0; i < pvl->marks_index;) {
@@ -297,9 +306,7 @@ static void pvl_coalesce_marks(struct pvl *pvl, int *coalesced_flag) {
             }
         }
     }
-    if (coalesced_flag != NULL) {
-        *coalesced_flag = coalesced;
-    }
+    return coalesced;
 }
 
 /*
@@ -307,10 +314,22 @@ static void pvl_coalesce_marks(struct pvl *pvl, int *coalesced_flag) {
  */
 static int pvl_save(struct pvl *pvl, int partial) {
     /*
-     * Commit may still be called with no marks
+     * Merge overlapping and/or continuous marks
      */
-    if (! pvl->marks_index) {
-        return 0;
+    pvl_coalesce_marks(pvl);
+
+    /*
+     * Perform leak detection
+     *
+     * Leak detection is still possible with partial writes,
+     * although to avoid false positives a change should be
+     * marked as soon as it is made in memory, which may
+     * incur some performance overhead. Nevertheless,
+     * leak detection is primarily a debugging tool that
+     * can be useful even if it has certain deficiencies.
+     */
+    if (pvl->leak_cb) {
+        pvl_detect_leaks(pvl, partial);
     }
 
     /*
@@ -319,11 +338,6 @@ static int pvl_save(struct pvl *pvl, int partial) {
     if (pvl->pre_save_cb == NULL) {
         return 0;
     }
-
-    /*
-     * Merge overlapping and/or continuous marks
-     */
-    pvl_coalesce_marks(pvl, NULL);
 
     /*
      * Calculate the total size of the change
@@ -425,20 +439,6 @@ static int pvl_save(struct pvl *pvl, int partial) {
      */
     (pvl->post_save_cb)(pvl, full, total, file, 0);
 
-    /*
-     * Perform leak detection if prereqs are met.
-     *
-     * Leak detection is still possible with partial writes,
-     * although to avoid false positives a change should be
-     * marked as soon as it is made in memory, which may
-     * incur some performance overhead. Nevertheless,
-     * leak detection is primarily a debugging tool that
-     * can be useful even if it has certain deficiencies.
-     */
-    if (pvl->leak_cb) {
-        pvl_leak_detection(pvl, partial);
-    }
-
     return 0;
 }
 
@@ -534,28 +534,34 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
     }
 }
 
-static int pvl_leak_detection(struct pvl *pvl, int partial) {
-    // TODO - don't wait for mirror application, work with marks
-    (void)(pvl);
-    (void)(partial);
+static void pvl_detect_leaks(struct pvl *pvl, int partial) {
+    size_t previous = 0;
+    for (size_t i = 0; i < pvl->marks_index; i++) {
+        mark m = pvl->marks[i];
+        pvl_detect_leaks_inner(pvl, partial, previous, m.start - pvl->main);
+        previous = m.start - pvl->main + m.length;
+    }
+    pvl_detect_leaks_inner(pvl, partial, previous, pvl->length);
+}
+
+static void pvl_detect_leaks_inner(struct pvl *pvl, int partial, size_t from, size_t to) {
     size_t in_diff = 0;
-    size_t start = 0;
-    for (size_t i = 0; i <= pvl->length; i++) {
+    size_t diff_start = 0;
+    for (size_t i = from; i <= to; i++) {
         if (in_diff) {
             if (pvl->main[i] == pvl->mirror[i]) { //diff over
                 // report diff
-                (pvl->leak_cb)(pvl, (pvl->main)+start, i-start, partial);
+                (pvl->leak_cb)(pvl, (pvl->main)+diff_start, i-diff_start, partial);
                 // clear trackers
                 in_diff = 0;
-                start = 0;
+                diff_start = 0;
             } // else do nothing
         } else {
             if (pvl->main[i] != pvl->mirror[i]) { //diff starts
                 // set trackers
                 in_diff = 1;
-                start = i;
+                diff_start = i;
             } // else do nothing
         }
     }
-    return 0;
 }
