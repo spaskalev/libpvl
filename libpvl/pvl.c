@@ -34,21 +34,21 @@ typedef struct {
 } pvl_change;
 
 struct pvl {
-    char*          main;
-    char*          mirror;
-    size_t         length;
-    pre_load_cb_t  pre_load_cb;
-    post_load_cb_t post_load_cb;
-    pre_save_cb_t  pre_save_cb;
-    post_save_cb_t post_save_cb;
-    leak_cb_t      leak_cb;
-    int            partial;
-    int            in_transaction;
-    FILE*          last_save_file;
-    long           last_save_pos;
-    size_t         marks_index;
-    size_t         marks_count;
-    pvl_span     marks[];
+    char*              main;
+    char*              mirror;
+    size_t             length;
+    pre_load_callback  *pre_load_cb;
+    post_load_callback *post_load_cb;
+    pre_save_callback  *pre_save_cb;
+    post_save_callback *post_save_cb;
+    leak_callback          *leak_cb;
+    int                 partial;
+    int                 in_transaction;
+    FILE*               last_save_file;
+    long                last_save_pos;
+    size_t              marks_index;
+    size_t              marks_count;
+    pvl_span            marks[];
 };
 
 size_t pvl_sizeof(size_t marks) {
@@ -63,9 +63,9 @@ static void pvl_coalesce_marks(struct pvl* pvl, int* coalesced_flag);
 static int pvl_leak_detection(struct pvl* pvl, int partial);
 
 struct pvl* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
-    pre_load_cb_t pre_load_cb, post_load_cb_t post_load_cb,
-    pre_save_cb_t pre_save_cb, post_save_cb_t post_save_cb,
-    leak_cb_t leak_cb) {
+    pre_load_callback pre_load_cb, post_load_callback post_load_cb,
+    pre_save_callback pre_save_cb, post_save_callback post_save_cb,
+    leak_callback leak_cb) {
     // Check for alignment
     size_t alignment = ((uintptr_t) at) % alignof(max_align_t);
     if (alignment != 0) {
@@ -133,12 +133,12 @@ int pvl_begin(struct pvl* pvl) {
         return 1;
     }
 
-	if (pvl->in_transaction) {
-		return 1;
-	}
+    if (pvl->in_transaction) {
+        return 1;
+    }
 
-	pvl->in_transaction = 1;
-	return 0;
+    pvl->in_transaction = 1;
+    return 0;
 }
 
 int pvl_mark(struct pvl* pvl, char* start, size_t length) {

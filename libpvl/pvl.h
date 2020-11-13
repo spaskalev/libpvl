@@ -55,7 +55,7 @@ size_t pvl_sizeof(size_t marks);
  *
  * FILE*              - The FILE* to load from. Return NULL to indicate failure.
  */
-typedef FILE* (*pre_load_cb_t)(struct pvl* pvl, int initial, FILE* up_to_src, long up_to_pos);
+typedef FILE *pre_load_callback(struct pvl* pvl, int initial, FILE* up_to_src, long up_to_pos);
 
 /*
  * Callback for confirming a loaded change
@@ -71,7 +71,7 @@ typedef FILE* (*pre_load_cb_t)(struct pvl* pvl, int initial, FILE* up_to_src, lo
  *
  * int                - Indicates whether change loading should continue.
  */
-typedef int (*post_load_cb_t)(struct pvl* pvl, FILE* file, int failed, long last_good);
+typedef int post_load_callback(struct pvl* pvl, FILE* file, int failed, long last_good);
 
 /*
  * Callback for preparing to persist a change
@@ -87,7 +87,7 @@ typedef int (*post_load_cb_t)(struct pvl* pvl, FILE* file, int failed, long last
  *
  * FILE*              - The FILE* to store to. Return NULL to indicate failure.
  */
-typedef FILE* (*pre_save_cb_t)(struct pvl* pvl, int full, size_t length);
+typedef FILE *pre_save_callback(struct pvl* pvl, int full, size_t length);
 
 /*
  * Callback for confirming a persisted change.
@@ -104,7 +104,7 @@ typedef FILE* (*pre_save_cb_t)(struct pvl* pvl, int full, size_t length);
  *
  * TODO full save request ? repeat request
  */
-typedef int (*post_save_cb_t)(struct pvl* pvl, int full, size_t length, FILE* file, int failed);
+typedef int post_save_callback(struct pvl* pvl, int full, size_t length, FILE* file, int failed);
 
 /*
  * Callback for reporting leaks
@@ -118,7 +118,7 @@ typedef int (*post_save_cb_t)(struct pvl* pvl, int full, size_t length, FILE* fi
  * Returns
  * - Nothing
  */
-typedef void (*leak_cb_t)(struct pvl* pvl, void* start, size_t length, int partial);
+typedef void leak_callback(struct pvl* pvl, void* start, size_t length, int partial);
 
 /*
  * Initialize pvl_t at the provided location.
@@ -149,9 +149,9 @@ typedef void (*leak_cb_t)(struct pvl* pvl, void* start, size_t length, int parti
  */
 struct pvl* pvl_init(char *at, size_t marks,
     char *main, size_t length, char *mirror,
-    pre_load_cb_t pre_load_cb, post_load_cb_t post_load_cb,
-    pre_save_cb_t pre_save_cb, post_save_cb_t post_save_cb,
-    leak_cb_t leak_cb);
+    pre_load_callback pre_load_cb, post_load_callback post_load_cb,
+    pre_save_callback pre_save_cb, post_save_callback post_save_cb,
+    leak_callback leak_cb);
 
 /*
  * Begin a new entry. Used primarily as a safety check.
