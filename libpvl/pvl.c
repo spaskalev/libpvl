@@ -21,29 +21,22 @@
 typedef struct {
     char*    start;
     size_t   length;
-} pvl_mark_t;
+} pvl_span;
 
 typedef struct {
     int    partial;
     size_t change_count;
-} pvl_change_header_t;
+} pvl_change_header;
 
 typedef struct {
     ptrdiff_t start;
     size_t    length;
-} pvl_change_t;
+} pvl_change;
 
-typedef size_t (*fread_ptr)(void *ptr, size_t size, size_t nmemb, FILE *stream);
-typedef size_t (*fwrite_ptr)(const void *ptr, size_t size, size_t nmemb, FILE *stream);
-typedef int (*fflush_ptr)(FILE *stream);
-
-struct pvl_s {
+struct pvl {
     char*          main;
     char*          mirror;
     size_t         length;
-    fread_ptr      fread;
-    fwrite_ptr     fwrite;
-    fflush_ptr     fflush;
     pre_load_cb_t  pre_load_cb;
     post_load_cb_t post_load_cb;
     pre_save_cb_t  pre_save_cb;
@@ -55,21 +48,21 @@ struct pvl_s {
     long           last_save_pos;
     size_t         marks_index;
     size_t         marks_count;
-    pvl_mark_t     marks[];
+    pvl_span     marks[];
 };
 
-size_t pvl_sizeof_pvl_t(size_t marks) {
-    return sizeof(struct pvl_s)+(marks * sizeof(pvl_mark_t));
+size_t pvl_sizeof(size_t marks) {
+    return sizeof(struct pvl)+(marks * sizeof(pvl_span));
 }
 
-static int pvl_load(pvl_t* pvl, int initial, FILE* req_from, long req_pos);
-static int pvl_save(pvl_t* pvl, int partial);
-static void pvl_clear_marks(pvl_t* pvl);
-static void pvl_clear_memory(pvl_t* pvl);
-static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag);
-static int pvl_leak_detection(pvl_t* pvl, int partial);
+static int pvl_load(struct pvl* pvl, int initial, FILE* req_from, long req_pos);
+static int pvl_save(struct pvl* pvl, int partial);
+static void pvl_clear_marks(struct pvl* pvl);
+static void pvl_clear_memory(struct pvl* pvl);
+static void pvl_coalesce_marks(struct pvl* pvl, int* coalesced_flag);
+static int pvl_leak_detection(struct pvl* pvl, int partial);
 
-pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
+struct pvl* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
     pre_load_cb_t pre_load_cb, post_load_cb_t post_load_cb,
     pre_save_cb_t pre_save_cb, post_save_cb_t post_save_cb,
     leak_cb_t leak_cb) {
@@ -84,12 +77,12 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
         return NULL;
     }
 
-    pvl_t* pvl = (pvl_t*) at;
+    struct pvl* pvl = (struct pvl*) at;
 
     // Ensure we don't have garbage. The custom sizeof function will
     // account for the flexible array at the end of the structure,
     // so there is no need to call pvl_clear_marks.
-    memset(pvl, 0, pvl_sizeof_pvl_t(marks));
+    memset(pvl, 0, pvl_sizeof(marks));
 
     if (marks == 0) {
         return NULL;
@@ -127,10 +120,6 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
 
     pvl->leak_cb = leak_cb;
 
-    pvl->fread=fread;
-    pvl->fwrite=fwrite;
-    pvl->fflush=fflush;
-
     // Perform initial load
     if (pvl_load(pvl, 1, NULL, 0) != 0) {
         return NULL;
@@ -139,7 +128,7 @@ pvl_t* pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
     return pvl;
 }
 
-int pvl_begin(pvl_t* pvl) {
+int pvl_begin(struct pvl* pvl) {
     if (pvl == NULL) {
         return 1;
     }
@@ -152,7 +141,7 @@ int pvl_begin(pvl_t* pvl) {
 	return 0;
 }
 
-int pvl_mark(pvl_t* pvl, char* start, size_t length) {
+int pvl_mark(struct pvl* pvl, char* start, size_t length) {
     if (pvl == NULL) {
         return 1;
     }
@@ -201,7 +190,7 @@ int pvl_mark(pvl_t* pvl, char* start, size_t length) {
     return 0;
 }
 
-int pvl_commit(pvl_t* pvl) {
+int pvl_commit(struct pvl* pvl) {
     if (pvl == NULL) {
         return 1;
     }
@@ -215,7 +204,7 @@ int pvl_commit(pvl_t* pvl) {
     return pvl_save(pvl, 0);
 }
 
-int pvl_rollback(pvl_t* pvl) {
+int pvl_rollback(struct pvl* pvl) {
     if (pvl == NULL) {
         return 1;
     }
@@ -235,7 +224,7 @@ int pvl_rollback(pvl_t* pvl) {
         for (size_t i = 0; i < pvl->marks_index; i++) {
             ptrdiff_t offset = pvl->marks[i].start - pvl->main;
             memcpy(pvl->marks[i].start, pvl->mirror+offset, pvl->marks[i].length);
-            pvl->marks[i] = (pvl_mark_t){0};
+            pvl->marks[i] = (pvl_span){0};
         }
         pvl->marks_index = 0;
         return 0;
@@ -247,21 +236,21 @@ int pvl_rollback(pvl_t* pvl) {
     return pvl_load(pvl, 1, pvl->last_save_file, pvl->last_save_pos);
 }
 
-static void pvl_clear_memory(pvl_t* pvl) {
+static void pvl_clear_memory(struct pvl* pvl) {
     memset(pvl->main, 0, pvl->length);
     if (pvl->mirror) {
         memset(pvl->mirror, 0, pvl->length);
     }
 }
 
-static void pvl_clear_marks(pvl_t* pvl) {
-    memset(pvl->marks, 0, pvl->marks_count * sizeof(pvl_mark_t));
+static void pvl_clear_marks(struct pvl* pvl) {
+    memset(pvl->marks, 0, pvl->marks_count * sizeof(pvl_span));
     pvl->marks_index = 0;
 }
 
 static int pvl_mark_compare(const void *a, const void *b) {
-    pvl_mark_t* mark_a = (pvl_mark_t*)a;
-    pvl_mark_t* mark_b = (pvl_mark_t*)b;
+    pvl_span* mark_a = (pvl_span*)a;
+    pvl_span* mark_b = (pvl_span*)b;
     if (mark_a->start > mark_b->start) {
         return 1;
     }
@@ -272,9 +261,9 @@ static int pvl_mark_compare(const void *a, const void *b) {
     return 0;
 }
 
-static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
+static void pvl_coalesce_marks(struct pvl* pvl, int* coalesced_flag) {
     int coalesced = 0;
-    qsort(pvl->marks, pvl->marks_index, sizeof(pvl_mark_t), pvl_mark_compare);
+    qsort(pvl->marks, pvl->marks_index, sizeof(pvl_span), pvl_mark_compare);
     for (size_t i = 0; i < pvl->marks_index;) {
         size_t j = i+1;
         for (; j < pvl->marks_index; j++) {
@@ -282,7 +271,7 @@ static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
                 // Coalesce overlapping or continuous marks
                 pvl->marks[i].length = pvl->marks[j].length;
                 // Clear the next mark
-                pvl->marks[j] = (pvl_mark_t){0};
+                pvl->marks[j] = (pvl_span){0};
                 // Raise the flag
                 coalesced = 1;
             } else {
@@ -303,7 +292,7 @@ static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
                     continue;
                 }
                 pvl->marks[i] = pvl->marks[j];
-                pvl->marks[j] = (pvl_mark_t){0};
+                pvl->marks[j] = (pvl_span){0};
                 pvl->marks_index = j;
             }
         }
@@ -316,7 +305,7 @@ static void pvl_coalesce_marks(pvl_t* pvl, int* coalesced_flag) {
 /*
  * Save the currently-marked memory content
  */
-static int pvl_save(pvl_t* pvl, int partial) {
+static int pvl_save(struct pvl* pvl, int partial) {
     /*
      * Commit may still be called with no marks
      */
@@ -339,9 +328,9 @@ static int pvl_save(pvl_t* pvl, int partial) {
     /*
      * Calculate the total size of the change
      */
-    size_t total = sizeof(pvl_change_header_t);
+    size_t total = sizeof(pvl_change_header);
     for (size_t i = 0; i < pvl->marks_index; i++) {
-        total += sizeof(pvl_change_t);
+        total += sizeof(pvl_change);
         total += pvl->marks[i].length;
     }
 
@@ -367,10 +356,10 @@ static int pvl_save(pvl_t* pvl, int partial) {
     /*
      * Construct and save the header
      */
-    pvl_change_header_t change_header = {0};
+    pvl_change_header change_header = {0};
     change_header.partial = partial;
     change_header.change_count = pvl->marks_index;
-    if (pvl->fwrite(&change_header, sizeof(pvl_change_header_t), 1, file) != 1) {
+    if (fwrite(&change_header, sizeof(pvl_change_header), 1, file) != 1) {
         (pvl->post_save_cb)(pvl, full, total, file, 1);
         return 1;
     }
@@ -379,14 +368,14 @@ static int pvl_save(pvl_t* pvl, int partial) {
      * Construct and save each change
      */
     for (size_t i = 0; i < pvl->marks_index; i++) {
-        pvl_change_t change = {0};
+        pvl_change change = {0};
         change.start = pvl->marks[i].start - pvl->main;
         change.length = pvl->marks[i].length;
-        if (pvl->fwrite(&change, sizeof(pvl_change_t), 1, file) != 1) {
+        if (fwrite(&change, sizeof(pvl_change), 1, file) != 1) {
             (pvl->post_save_cb)(pvl, full, total, file, 1);
             return 1;
         }
-        if (pvl->fwrite(pvl->marks[i].start, pvl->marks[i].length, 1, file) != 1) {
+        if (fwrite(pvl->marks[i].start, pvl->marks[i].length, 1, file) != 1) {
             (pvl->post_save_cb)(pvl, full, total, file, 1);
             return 1;
         }
@@ -395,7 +384,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
     /*
      * Flush, as buffered data may otherwise be lost
      */
-    if (pvl->fflush(file)) {
+    if (fflush(file)) {
         (pvl->post_save_cb)(pvl, full, total, file, 1);
         return 1;
     }
@@ -453,7 +442,7 @@ static int pvl_save(pvl_t* pvl, int partial) {
     return 0;
 }
 
-static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
+static int pvl_load(struct pvl* pvl, int initial, FILE* up_to_src, long up_to_pos) {
     /*
      * Cannot load anything if there is no pre-load callback
      */
@@ -491,10 +480,10 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
         /*
          * Try to load a change from it
          */
-        pvl_change_header_t change_header = {0};
+        pvl_change_header change_header = {0};
         last_good_pos = ftell(file);
 
-        if (pvl->fread(&change_header, sizeof(pvl_change_header_t), 1, file) != 1) {
+        if (fread(&change_header, sizeof(pvl_change_header), 1, file) != 1) {
             // Couldn't load the change, signal the callback
             if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
                 reset_load = 1;
@@ -507,8 +496,8 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
          * Read each mark header and content
          */
         for (size_t i = 0; i < change_header.change_count; i++) {
-            pvl_change_t change = {0};
-            if (pvl->fread(&change, sizeof(pvl_change_t), 1, file) != 1) {
+            pvl_change change = {0};
+            if (fread(&change, sizeof(pvl_change), 1, file) != 1) {
                 // Couldn't load the change, signal the callback
                 if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
                     reset_load = 1;
@@ -516,7 +505,7 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
                 }
                 return 1;
             }
-            if (pvl->fread(pvl->main+change.start, change.length, 1, file) != 1) {
+            if (fread(pvl->main+change.start, change.length, 1, file) != 1) {
                 // Couldn't load the change, signal the callback
                 if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
                     reset_load = 1;
@@ -545,7 +534,7 @@ static int pvl_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
     }
 }
 
-static int pvl_leak_detection(pvl_t* pvl, int partial) {
+static int pvl_leak_detection(struct pvl* pvl, int partial) {
     // TODO - don't wait for mirror application, work with marks
     (void)(pvl);
     (void)(partial);

@@ -350,7 +350,7 @@ void test_basic_rollback() {
     ctx = (test_ctx){0};
 
     // To break a circular dependency :)
-    pvl_t* pvl = (pvl_t*)ctx.pvl_at;
+    struct pvl* pvl = (struct pvl*)ctx.pvl_at;
 
     ctx.pre_load[0].return_file = NULL;
     ctx.pre_load[0].expected_pvl = pvl;
@@ -422,7 +422,7 @@ void test_basic_rollback_mirror() {
     ctx = (test_ctx){0};
 
     // To break a circular dependency :)
-    pvl_t* pvl = (pvl_t*)ctx.pvl_at;
+    struct pvl* pvl = (struct pvl*)ctx.pvl_at;
 
     ctx.pre_load[0].return_file = NULL;
     ctx.pre_load[0].expected_pvl = pvl;
@@ -482,7 +482,7 @@ void test_basic_rollback_partial() {
     ctx = (test_ctx){0};
 
     // To break a circular dependency :)
-    pvl_t* pvl = (pvl_t*)ctx.pvl_at;
+    struct pvl* pvl = (struct pvl*)ctx.pvl_at;
 
     ctx.pre_load[0].return_file = NULL;
     ctx.pre_load[0].expected_pvl = pvl;
@@ -558,7 +558,7 @@ void test_basic_rollback_partil_mirror() {
     ctx = (test_ctx){0};
 
     // To break a circular dependency :)
-    pvl_t* pvl = (pvl_t*)ctx.pvl_at;
+    struct pvl* pvl = (struct pvl*)ctx.pvl_at;
 
     ctx.pre_load[0].return_file = NULL;
     ctx.pre_load[0].expected_pvl = pvl;

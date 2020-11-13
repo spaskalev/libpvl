@@ -15,9 +15,9 @@
 
 void test_coalesce_no_marks() {
     size_t mark_count = 1;
-    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(mark_count)];
+    alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
     char main_mem[1024];
-    pvl_t* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    struct pvl* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
     size_t marks = pvl->marks_index;
     int coalesced;
     pvl_coalesce_marks(pvl, &coalesced);
@@ -27,9 +27,9 @@ void test_coalesce_no_marks() {
 
 void test_coalesce_one_mark() {
     size_t mark_count = 1;
-    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(mark_count)];
+    alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
     char main_mem[1024];
-    pvl_t* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    struct pvl* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
     assert(!pvl_begin(pvl));
     assert(!pvl_mark(pvl, main_mem, 1));
     size_t marks = pvl->marks_index;
@@ -41,9 +41,9 @@ void test_coalesce_one_mark() {
 
 void test_coalesce_many_marks() {
     size_t mark_count = 2;
-    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(mark_count)];
+    alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
     char main_mem[1024];
-    pvl_t* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    struct pvl* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
     assert(!pvl_begin(pvl));
     assert(!pvl_mark(pvl, main_mem, 1));
     assert(!pvl_mark(pvl, main_mem+10, 1));
@@ -56,9 +56,9 @@ void test_coalesce_many_marks() {
 
 void test_coalesce_overlapping_marks() {
     size_t mark_count = 3;
-    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(mark_count)];
+    alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
     char main_mem[1024];
-    pvl_t* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    struct pvl* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
     assert(!pvl_begin(pvl));
     assert(!pvl_mark(pvl, main_mem, 10));
     assert(!pvl_mark(pvl, main_mem+5, 15));
@@ -73,9 +73,9 @@ void test_coalesce_overlapping_marks() {
 
 void test_coalesce_continuous_marks() {
     size_t mark_count = 3;
-    alignas(max_align_t) char pvlbuf[pvl_sizeof_pvl_t(mark_count)];
+    alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
     char main_mem[1024];
-    pvl_t* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    struct pvl* pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
     assert(!pvl_begin(pvl));
     assert(!pvl_mark(pvl, main_mem, 10));
     assert(!pvl_mark(pvl, main_mem+10, 20));
@@ -92,17 +92,17 @@ void test_coalesce_continuous_marks() {
 }
 
 void test_pvl_mark_compare_null_null() {
-    pvl_mark_t a, b;
-    a = (pvl_mark_t){0};
-    b = (pvl_mark_t){0};
+    pvl_span a, b;
+    a = (pvl_span){0};
+    b = (pvl_span){0};
     assert(pvl_mark_compare(&a, &b) == 0);
 }
 
 void test_pvl_mark_compare_first_larger() {
     char buf[512];
-    pvl_mark_t a, b;
-    a = (pvl_mark_t){0};
-    b = (pvl_mark_t){0};
+    pvl_span a, b;
+    a = (pvl_span){0};
+    b = (pvl_span){0};
 
     a.start = buf+512;
     b.start = buf;
@@ -111,9 +111,9 @@ void test_pvl_mark_compare_first_larger() {
 
 void test_pvl_mark_compare_first_smaller() {
     char buf[512];
-    pvl_mark_t a, b;
-    a = (pvl_mark_t){0};
-    b = (pvl_mark_t){0};
+    pvl_span a, b;
+    a = (pvl_span){0};
+    b = (pvl_span){0};
 
     a.start = buf;
     b.start = buf+512;
@@ -122,9 +122,9 @@ void test_pvl_mark_compare_first_smaller() {
 
 void test_pvl_mark_compare_equal() {
     char buf[512];
-    pvl_mark_t a, b;
-    a = (pvl_mark_t){0};
-    b = (pvl_mark_t){0};
+    pvl_span a, b;
+    a = (pvl_span){0};
+    b = (pvl_span){0};
 
     a.start = buf;
     b.start = buf;
@@ -323,8 +323,8 @@ void test_pvl_init_initial_load_error_fail_02() {
     memset(ctx.mirror, 0, 1024);
 
     // Read from a capped buffer
-    // FILE* load_src = fmemopen(ctx.dyn_buf,sizeof(pvl_change_header_t)+sizeof(pvl_change_t)+32,"r");
-    FILE* load_src = fmemopen(ctx.dyn_buf,sizeof(pvl_change_header_t),"r");
+    // FILE* load_src = fmemopen(ctx.dyn_buf,sizeof(pvl_change_header)+sizeof(pvl_change)+32,"r");
+    FILE* load_src = fmemopen(ctx.dyn_buf,sizeof(pvl_change_header),"r");
     printf("%d\n", errno);
     assert(load_src);
 
@@ -388,8 +388,8 @@ void test_pvl_init_initial_load_error_recover_02() {
     memset(ctx.mirror, 0, 1024);
 
     // Read from a capped buffer
-    // FILE* load_src = fmemopen(ctx.dyn_buf,sizeof(pvl_change_header_t)+sizeof(pvl_change_t)+32,"r");
-    FILE* load_src = fmemopen(ctx.dyn_buf,sizeof(pvl_change_header_t),"r");
+    // FILE* load_src = fmemopen(ctx.dyn_buf,sizeof(pvl_change_header)+sizeof(pvl_change)+32,"r");
+    FILE* load_src = fmemopen(ctx.dyn_buf,sizeof(pvl_change_header),"r");
     printf("%d\n", errno);
     assert(load_src);
 
@@ -477,7 +477,7 @@ void test_pvl_init_initial_load_error_fail_03() {
     memset(ctx.mirror, 0, 1024);
 
     // Read from a capped buffer
-    FILE* load_src = fmemopen(ctx.dyn_buf,sizeof(pvl_change_header_t)+sizeof(pvl_change_t),"r");
+    FILE* load_src = fmemopen(ctx.dyn_buf,sizeof(pvl_change_header)+sizeof(pvl_change),"r");
     printf("%d\n", errno);
     assert(load_src);
 
@@ -541,7 +541,7 @@ void test_pvl_init_initial_load_error_recover_03() {
     memset(ctx.mirror, 0, 1024);
 
     // Read from a capped buffer
-    FILE* load_src = fmemopen(ctx.dyn_buf,sizeof(pvl_change_header_t)+sizeof(pvl_change_t),"r");
+    FILE* load_src = fmemopen(ctx.dyn_buf,sizeof(pvl_change_header)+sizeof(pvl_change),"r");
     printf("%d\n", errno);
     assert(load_src);
 
@@ -638,7 +638,7 @@ void test_pvl_save_error_fail_02() {
     assert(ctx.pvl != NULL);
 
     char buffer[1024];
-    FILE* save_dest = fmemopen(buffer,sizeof(pvl_change_header_t),"w+");
+    FILE* save_dest = fmemopen(buffer,sizeof(pvl_change_header),"w+");
     setbuf(save_dest, NULL);
 
     ctx.pre_save[0].return_file = save_dest;
@@ -676,7 +676,7 @@ void test_pvl_save_error_fail_03() {
     assert(ctx.pvl != NULL);
 
     char buffer[1024];
-    FILE* save_dest = fmemopen(buffer,sizeof(pvl_change_header_t)+sizeof(pvl_change_t),"w+");
+    FILE* save_dest = fmemopen(buffer,sizeof(pvl_change_header)+sizeof(pvl_change),"w+");
     setbuf(save_dest, NULL);
 
     ctx.pre_save[0].return_file = save_dest;
@@ -714,7 +714,7 @@ void test_pvl_save_error_fail_flush() {
     assert(ctx.pvl != NULL);
 
     char buffer[1024];
-    FILE* save_dest = fmemopen(buffer,sizeof(pvl_change_header_t)+sizeof(pvl_change_t),"w+");
+    FILE* save_dest = fmemopen(buffer,sizeof(pvl_change_header)+sizeof(pvl_change),"w+");
     // Leave unbufferred so that it fails at fflush
     //setbuf(save_dest, NULL);
 
@@ -753,7 +753,7 @@ void test_pvl_save_error_fail_partial() {
     assert(ctx.pvl != NULL);
 
     char buffer[1024];
-    FILE* save_dest = fmemopen(buffer,sizeof(pvl_change_header_t)+sizeof(pvl_change_t),"w+");
+    FILE* save_dest = fmemopen(buffer,sizeof(pvl_change_header)+sizeof(pvl_change),"w+");
     // Leave unbufferred so that it fails at fflush
     //setbuf(save_dest, NULL);
 

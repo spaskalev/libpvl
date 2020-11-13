@@ -1,7 +1,7 @@
 typedef struct {
     FILE*  return_file;
 
-    pvl_t* expected_pvl;
+    struct pvl* expected_pvl;
     int    expected_initial;
     FILE*  expected_up_to_src;
     long   expected_up_to_pos;
@@ -10,7 +10,7 @@ typedef struct {
 typedef struct {
     int return_int;
 
-    pvl_t* expected_pvl;
+    struct pvl* expected_pvl;
     FILE*  expected_file;
     int    expected_failed;
     long   expected_last_good;
@@ -19,7 +19,7 @@ typedef struct {
 typedef struct {
     FILE* return_file;
 
-    pvl_t* expected_pvl;
+    struct pvl* expected_pvl;
     int    expected_full;
     size_t expected_length;
 } pre_save_ctx;
@@ -27,7 +27,7 @@ typedef struct {
 typedef struct {
     int return_int;
 
-    pvl_t* expected_pvl;
+    struct pvl* expected_pvl;
     int    expected_full;
     size_t expected_length;
     FILE*  expected_file;
@@ -35,14 +35,14 @@ typedef struct {
 } post_save_ctx;
 
 typedef struct {
-    pvl_t* expected_pvl;
+    struct pvl* expected_pvl;
     void*  expected_start;
     size_t expected_length;
     int    expected_partial;
 } leak_ctx;
 
 typedef struct {
-    pvl_t* pvl;
+    struct pvl* pvl;
     alignas(max_align_t) char pvl_at[1024];
     alignas(max_align_t) char buf[1024];
     alignas(max_align_t) char mirror[1024];
@@ -75,7 +75,7 @@ typedef struct {
 // Shared global
 test_ctx ctx;
 
-FILE* pre_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
+FILE* pre_load(struct pvl* pvl, int initial, FILE* up_to_src, long up_to_pos) {
     printf("\n [pre_load] [%d] \n", ctx.pre_load_pos);
     pre_load_ctx fix = ctx.pre_load[ctx.pre_load_pos];
     printf("      pvl: %p expected: %p\n", (void*) pvl, (void*) fix.expected_pvl);
@@ -90,7 +90,7 @@ FILE* pre_load(pvl_t* pvl, int initial, FILE* up_to_src, long up_to_pos) {
     return fix.return_file;
 }
 
-int post_load(pvl_t* pvl, FILE* file, int failed, long last_good) {
+int post_load(struct pvl* pvl, FILE* file, int failed, long last_good) {
     printf("\n[post_load] [%d] \n", ctx.post_load_pos);
     post_load_ctx fix = ctx.post_load[ctx.post_load_pos];
     printf("      pvl: %p expected: %p\n", (void*) pvl, (void*) fix.expected_pvl);
@@ -105,7 +105,7 @@ int post_load(pvl_t* pvl, FILE* file, int failed, long last_good) {
     return fix.return_int;
 }
 
-FILE* pre_save(pvl_t* pvl, int full, size_t length) {
+FILE* pre_save(struct pvl* pvl, int full, size_t length) {
     printf("\n [pre_save] [%d] \n", ctx.pre_save_pos);
     pre_save_ctx fix = ctx.pre_save[ctx.pre_save_pos];
     printf("   pvl: %p expected: %p\n", (void*) pvl, (void*) fix.expected_pvl);
@@ -118,7 +118,7 @@ FILE* pre_save(pvl_t* pvl, int full, size_t length) {
     return fix.return_file;
 }
 
-int post_save(pvl_t* pvl, int full, size_t length, FILE* file, int failed) {
+int post_save(struct pvl* pvl, int full, size_t length, FILE* file, int failed) {
     printf("\n[post_save] [%d] \n", ctx.post_save_pos);
     post_save_ctx fix = ctx.post_save[ctx.post_save_pos];
     printf("   pvl: %p expected: %p\n", (void*) pvl, (void*) fix.expected_pvl);
@@ -135,7 +135,7 @@ int post_save(pvl_t* pvl, int full, size_t length, FILE* file, int failed) {
     return fix.return_int;
 }
 
-void leak(pvl_t* pvl, void* start, size_t length, int partial) {
+void leak(struct pvl* pvl, void* start, size_t length, int partial) {
     printf("\n    [leak] [%d] \n", ctx.leak_pos);
     leak_ctx fix = ctx.leak[ctx.leak_pos];
     printf("    pvl: %p expected: %p\n", (void*) pvl, (void*) fix.expected_pvl);
