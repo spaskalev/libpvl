@@ -43,9 +43,9 @@ Call pvl_begin(struct pvl\*) once for each transaction that you want libpvl to h
 
 ### After making changes
 
-Call pvl_mark(struct pvl\*, char*, size_t) to inform libpvl of a span of memory that has been changed. This has to happen in a transaction started by pvl_begin(...). You can call pvl_mark(...) multiple times in a single transaction.
+Call pvl_mark(struct pvl\*, char*, size_t) to inform libpvl of a span of memory that has been changed. This has to happen in a transaction started by pvl_begin. You can call pvl_mark multiple times in a single transaction.
 
-The span location has to fall in the memory span that the pvl_t\* instance has been configured to manage upon calling pvl_init(...)
+The span location has to fall in the memory span that the struct pvl\* instance has been configured to manage upon calling pvl_init.
 
 ### Confirming changes
 
