@@ -25,7 +25,7 @@ libpvl is designed to be developer-friendly through a small and well-defined API
 
 libpvl's IO handing is done through callbacks. There are four IO-related callbacks that can be set - pre-save, post-save, pre-load, post-load.
 
-The pre-load callback will be called upon initializing the pvl_t\* object, if set. The pre-load callback should return a FILE\* object from which libpvl will attempt to load a persisted change.
+The pre-load callback will be called upon initializing the struct pvl\* object, if set. The pre-load callback should return a FILE\* object from which libpvl will attempt to load a persisted change.
 
 The post-load callback will be called after libpvl has performed a load attempt. It will indicate whether the load  was successful and in turn the post-load callback should indicate whether libpvl should attempt to load another change.
 
@@ -35,25 +35,25 @@ The post-save callback will be called after libpvl has attempted to persist a ch
 
 ### Initialization
 
-libpvl's main object type is pvl_t\*, an opaque pointer that is initialized by pvl_init(...) at the specified memory location. If the parameters are correct a non-NULL pvl_t\* is returned that can be operated upon by the rest of the functions.
+libpvl's main object type is struct pvl\*, an incomplete type that is initialized by pvl_init(...) at the specified memory location. If the parameters are correct a non-NULL struct pvl\* is returned that can be operated upon by the rest of the functions.
 
 ### Before making changes
 
-Call pvl_begin(...) once for each transaction that you want libpvl to handle. The other functions will fail unless a transaction has begun. This is a safety feature to detect transaction-related bugs in calling code.
+Call pvl_begin(struct pvl\*) once for each transaction that you want libpvl to handle. The other functions will fail unless a transaction has begun. This is a safety feature to detect transaction-related bugs in calling code.
 
 ### After making changes
 
-Call pvl_mark(...) to inform libpvl of a span of memory that has been changed. This has to happen in a transaction started by pvl_begin(...). You can call pvl_mark(...) multiple times in a single transaction.
+Call pvl_mark(struct pvl\*, char*, size_t) to inform libpvl of a span of memory that has been changed. This has to happen in a transaction started by pvl_begin(...). You can call pvl_mark(...) multiple times in a single transaction.
 
 The span location has to fall in the memory span that the pvl_t\* instance has been configured to manage upon calling pvl_init(...)
 
 ### Confirming changes
 
-Call pvl_commit(...) to make libpvl persist the currently-marked spans.
+Call pvl_commit(struct pvl\*) to make libpvl persist the currently-marked spans.
 
 ### Canceling changes
 
-Call pvl_rollback(...) to make libpvl abandon the currently-marked spans.
+Call pvl_rollback(struct pvl\*) to make libpvl abandon the currently-marked spans.
 
 ## Troubleshooting
 
