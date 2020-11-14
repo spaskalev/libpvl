@@ -56,7 +56,8 @@ function compile_and_run_static_test() {
 }
 
 function verify_coverage() {
-    rm gcovr/*.html
+    mkdir -p gcovr
+    rm -f gcovr/*.html
     # Generate full coverage report
     gcovr --html-details --output gcovr/coverage.html
     # Enforce lib coverage
