@@ -24,7 +24,6 @@ typedef struct {
 } mark;
 
 typedef struct {
-    int    partial;
     size_t change_count;
 } change_header;
 
@@ -42,9 +41,9 @@ struct pvl {
     pre_save_callback  *pre_save_cb;
     post_save_callback *post_save_cb;
     leak_callback      *leak_cb;
-    int                partial;
     int                in_transaction;
     FILE               *last_save_file;
+    int                marks_combined;
     long               last_save_pos;
     size_t             marks_index;
     size_t             marks_count;
@@ -56,12 +55,12 @@ size_t pvl_sizeof(size_t marks) {
 }
 
 static int pvl_load(struct pvl *pvl, int initial, FILE *req_from, long req_pos);
-static int pvl_save(struct pvl *pvl, int partial);
-static void pvl_clear_marks(struct pvl *pvl);
+static int pvl_save(struct pvl *pvl);
+//static void pvl_clear_marks(struct pvl *pvl);
 static void pvl_clear_memory(struct pvl *pvl);
 static int pvl_coalesce_marks(struct pvl *pvl);
-static void pvl_detect_leaks(struct pvl *pvl, int partial);
-static void pvl_detect_leaks_inner(struct pvl *pvl, int partial, size_t from, size_t to);
+static void pvl_detect_leaks(struct pvl *pvl);
+static void pvl_detect_leaks_inner(struct pvl *pvl, size_t from, size_t to);
 
 struct pvl *pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
     pre_load_callback pre_load_cb, post_load_callback post_load_cb,
@@ -157,34 +156,79 @@ int pvl_mark(struct pvl *pvl, char *start, size_t length) {
         return 1;
     }
 
-    // TODO if current length of all marks plus the new mark
-    // is over the partial write treshold - perform a partial write first,
-    // then clean the marks and add the new one
-
     // Add it to the marks list if there is an available slot
     if (pvl->marks_index < pvl->marks_count) {
         pvl->marks[pvl->marks_index].start = start;
         pvl->marks[pvl->marks_index].length = length;
         pvl->marks_index++;
     } else {
-        // Marks are full, need to coalesce them
-        if (pvl_coalesce_marks(pvl)) {
-            // Recurse - this add will pass since at least one mark was coalesced
-            return pvl_mark(pvl, start, length);
-        }
+		// TODO add a flag to prevent constant coalescing
+        // Mark slots are full, need to coalesce them
+		if (pvl_coalesce_marks(pvl)) {
+			// Recurse - this add will pass since at least one mark was coalesced
+			return pvl_mark(pvl, start, length);
+		}
 
-        // Save a partial change
-        int partial = pvl_save(pvl, 1);
-        if (partial) {
-            // Failed to save the partial change
-            return 1;
-        }
+        // Marks cannot be coalesced, need to be combined
 
-        // Clear out all marks
-        pvl_clear_marks(pvl);
+        // No action required if new mark is contained or contains a current mark
+        // Use marks_count as the sentinel value to avoid size_t underflow in
+        // left-of/right-of calculations
+        size_t closest_next = pvl->marks_count;
+        size_t closest_prev = pvl->marks_count;
+        for (size_t i = 0; i < pvl->marks_index; i++) {
+			if (start >= pvl->marks[i].start && length <= pvl->marks[i].length) {
+				// New mark is already contained, nothing more to do
+				return 0;
+			}
+			if (start <= pvl->marks[i].start && length >= pvl->marks[i].length) {
+				// New mark contains current mark, swap
+				pvl->marks[i].start = start;
+				pvl->marks[i].length = length;
+				return 0;
+			}
+			if (length > pvl->marks[i].length) { // right-of
+				if (closest_prev == pvl->marks_count) {
+					closest_prev = i;
+				} else {
+					if ((length - pvl->marks[i].length) < (length - pvl->marks[closest_prev].length)) {
+						closest_prev = i;
+					}
+				}
+			}
+			if (start < pvl->marks[i].start) { // left of
+				if (closest_next == pvl->marks_count) {
+					closest_next = i;
+				} else {
+					if ((pvl->marks[i].start - start) < (pvl->marks[closest_next].start - start)) {
+						closest_next = i;
+					}
+				}
+			}
+		}
+		
+		// At this point either one or both are set
+		if ((closest_next != pvl->marks_count) && (closest_prev != pvl->marks_count)) {
+			size_t next_distance = pvl->marks[closest_next].start - start;
+			size_t prev_distance = length - pvl->marks[closest_prev].length;
+			if (next_distance <= prev_distance) {
+				// use next
+				closest_prev = pvl->marks_count;
+			} else {
+				// use prev
+				closest_next = pvl->marks_count;
+			}
+		}
+		
+		// if mark is not contained - extend closest mark
+		if (closest_next != pvl->marks_count) {
+			pvl->marks[closest_next].start = start;
+		} else {
+			pvl->marks[closest_prev].length = length;
+		}
 
-        // Recurse - this will pass as there are no marks
-        return pvl_mark(pvl, start, length);
+		pvl->marks_combined = 1;
+        return 0;
     }
     return 0;
 }
@@ -208,9 +252,9 @@ int pvl_commit(struct pvl *pvl) {
         return 1;
     }
 
-    // Commit is just a non-partial save
     pvl->in_transaction = 0;
-    return pvl_save(pvl, 0);
+    pvl->marks_combined = 0;
+    return pvl_save(pvl);
 }
 
 static void pvl_clear_memory(struct pvl *pvl) {
@@ -220,10 +264,10 @@ static void pvl_clear_memory(struct pvl *pvl) {
     }
 }
 
-static void pvl_clear_marks(struct pvl *pvl) {
-    memset(pvl->marks, 0, pvl->marks_count * sizeof(mark));
-    pvl->marks_index = 0;
-}
+//static void pvl_clear_marks(struct pvl *pvl) {
+//    memset(pvl->marks, 0, pvl->marks_count * sizeof(mark));
+//    pvl->marks_index = 0;
+//}
 
 static int pvl_mark_compare(const void *a, const void *b) {
     mark *mark_a = (mark*)a;
@@ -280,7 +324,7 @@ static int pvl_coalesce_marks(struct pvl *pvl) {
 /*
  * Save the currently-marked memory content
  */
-static int pvl_save(struct pvl *pvl, int partial) {
+static int pvl_save(struct pvl *pvl) {
     /*
      * Merge overlapping and/or continuous marks
      */
@@ -288,16 +332,9 @@ static int pvl_save(struct pvl *pvl, int partial) {
 
     /*
      * Perform leak detection
-     *
-     * Leak detection is still possible with partial writes,
-     * although to avoid false positives a change should be
-     * marked as soon as it is made in memory, which may
-     * incur some performance overhead. Nevertheless,
-     * leak detection is primarily a debugging tool that
-     * can be useful even if it has certain deficiencies.
      */
     if (pvl->leak_cb) {
-        pvl_detect_leaks(pvl, partial);
+        pvl_detect_leaks(pvl);
     }
 
     /*
@@ -339,7 +376,6 @@ static int pvl_save(struct pvl *pvl, int partial) {
      * Construct and save the header
      */
     change_header change_header = {0};
-    change_header.partial = partial;
     change_header.change_count = pvl->marks_index;
     if (fwrite(&change_header, sizeof(change_header), 1, file) != 1) {
         (pvl->post_save_cb)(pvl, full, total, file, 1);
@@ -373,33 +409,12 @@ static int pvl_save(struct pvl *pvl, int partial) {
 
     /*
      * Apply to mirror
-     *
-     * pvl not partial, flag not partial - apply changes
-     * pvl not partial, flag partial - set pvl to partial, do not apply
-     * pvl partial, flag partial - do not apply
-     * pvl partial, flag not partial - clear pvl, apply entire block
      */
     if (pvl->mirror) {
-        if (partial) {
-            pvl->partial = partial;
-        } else {
-            if (pvl->partial) {
-                pvl->partial = 0;
-                // Perform a full copy
-                memcpy(pvl->mirror, pvl->main, pvl->length);
-            } else {
-                for (size_t i = 0; i < pvl->marks_index; i++) {
-                    ptrdiff_t offset = pvl->marks[i].start - pvl->main;
-                    memcpy(pvl->mirror+offset, pvl->marks[i].start, pvl->marks[i].length);
-                }
-            }
-        }
-    }
-
-    // Store the last complete save info in the pvl
-    if (!partial) {
-        pvl->last_save_file = file;
-        pvl->last_save_pos = ftell(file);
+		for (size_t i = 0; i < pvl->marks_index; i++) {
+			ptrdiff_t offset = pvl->marks[i].start - pvl->main;
+			memcpy(pvl->mirror+offset, pvl->marks[i].start, pvl->marks[i].length);
+		}
     }
 
     /*
@@ -486,11 +501,10 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
         last_good_pos = ftell(file);
 
         /*
-         * Apply it to the mirror
-         *
-         * Do not apply partial changes as the load may fail later on
+         * Apply it to the mirror.
+         * TODO - optimize this only for changed spans
          */
-        if (pvl->mirror && !change_header.partial) {
+        if (pvl->mirror) {
             memcpy(pvl->mirror, pvl->main, pvl->length);
         }
 
@@ -502,24 +516,25 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
     }
 }
 
-static void pvl_detect_leaks(struct pvl *pvl, int partial) {
+static void pvl_detect_leaks(struct pvl *pvl) {
     size_t previous = 0;
     for (size_t i = 0; i < pvl->marks_index; i++) {
         mark m = pvl->marks[i];
-        pvl_detect_leaks_inner(pvl, partial, previous, m.start - pvl->main);
+        pvl_detect_leaks_inner(pvl, previous, m.start - pvl->main);
         previous = m.start - pvl->main + m.length;
     }
-    pvl_detect_leaks_inner(pvl, partial, previous, pvl->length);
+    pvl_detect_leaks_inner(pvl, previous, pvl->length);
 }
 
-static void pvl_detect_leaks_inner(struct pvl *pvl, int partial, size_t from, size_t to) {
+static void pvl_detect_leaks_inner(struct pvl *pvl, size_t from, size_t to) {
     size_t in_diff = 0;
     size_t diff_start = 0;
     for (size_t i = from; i <= to; i++) {
         if (in_diff) {
             if (pvl->main[i] == pvl->mirror[i]) { //diff over
                 // report diff
-                (pvl->leak_cb)(pvl, (pvl->main)+diff_start, i-diff_start, partial);
+                // toggle probable leak detection on combined marks
+                (pvl->leak_cb)(pvl, (pvl->main)+diff_start, i-diff_start, pvl->marks_combined);
                 // clear trackers
                 in_diff = 0;
                 diff_start = 0;

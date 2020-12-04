@@ -112,13 +112,12 @@ typedef int post_save_callback(struct pvl *pvl, int full, size_t length, FILE *f
  * Passed parameters
  * - Start location of the leaked area
  * - Length of the leaked area
- * - Partial detection flag - leaks reported with the partial flag on may be
- *                            false positives - not yet marked.
+ * - Probable false positive flag
  *
  * Returns
  * - Nothing
  */
-typedef void leak_callback(struct pvl *pvl, void *start, size_t length, int partial);
+typedef void leak_callback(struct pvl *pvl, void *start, size_t length, int probable);
 
 /*
  * Initialize pvl_t at the provided location.
@@ -160,9 +159,6 @@ int pvl_begin(struct pvl *pvl);
 
 /*
  * Mark a span of memory for inclusion in the next commit.
- *
- * Make sure to call mark after the memory has been updated,
- * as partial writes may occur before commit is called.
  */
 int pvl_mark(struct pvl *pvl, char *start, size_t length);
 

@@ -123,7 +123,7 @@ void test_pvl_mark_compare_equal() {
 
 void test_pvl_init_initial_load_error_fail_01() {
     printf("\n[test_pvl_init_initial_load_error_fail_01]\n");
-    int written_length = 96;
+    int written_length = 88;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -187,7 +187,7 @@ void test_pvl_init_initial_load_error_fail_01() {
 
 void test_pvl_init_initial_load_error_recover_01() {
     printf("\n[test_pvl_init_initial_load_error_recover_01]\n");
-    int written_length = 96;
+    int written_length = 88;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -251,7 +251,7 @@ void test_pvl_init_initial_load_error_recover_01() {
     ctx.post_load[1].expected_pvl = ctx.pvl;
     ctx.post_load[1].expected_file = ctx.dyn_file;
     ctx.post_load[1].expected_failed = 0;
-    ctx.post_load[1].expected_last_good = 96;
+    ctx.post_load[1].expected_last_good = 88;
 
     // Create a new pvl to load the data
     ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
@@ -275,7 +275,7 @@ void test_pvl_init_initial_load_error_recover_01() {
 
 void test_pvl_init_initial_load_error_fail_02() {
     printf("\n[test_pvl_init_initial_load_error_fail_02]\n");
-    int written_length = 96;
+    int written_length = 88;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -340,7 +340,7 @@ void test_pvl_init_initial_load_error_fail_02() {
 
 void test_pvl_init_initial_load_error_recover_02() {
     printf("\n[test_pvl_init_initial_load_error_recover_02]\n");
-    int written_length = 96;
+    int written_length = 88;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -404,7 +404,7 @@ void test_pvl_init_initial_load_error_recover_02() {
     ctx.post_load[1].expected_pvl = ctx.pvl;
     ctx.post_load[1].expected_file = ctx.dyn_file;
     ctx.post_load[1].expected_failed = 0;
-    ctx.post_load[1].expected_last_good = 96;
+    ctx.post_load[1].expected_last_good = 88;
 
     // Create a new pvl to load the data
     ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
@@ -428,7 +428,7 @@ void test_pvl_init_initial_load_error_recover_02() {
 
 void test_pvl_init_initial_load_error_fail_03() {
     printf("\n[test_pvl_init_initial_load_error_fail_03]\n");
-    int written_length = 96;
+    int written_length = 88;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -492,7 +492,7 @@ void test_pvl_init_initial_load_error_fail_03() {
 
 void test_pvl_init_initial_load_error_recover_03() {
     printf("\n[test_pvl_init_initial_load_error_recover_03]\n");
-    int written_length = 96;
+    int written_length = 88;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -556,7 +556,7 @@ void test_pvl_init_initial_load_error_recover_03() {
     ctx.post_load[1].expected_pvl = ctx.pvl;
     ctx.post_load[1].expected_file = ctx.dyn_file;
     ctx.post_load[1].expected_failed = 0;
-    ctx.post_load[1].expected_last_good = 96;
+    ctx.post_load[1].expected_last_good = 88;
 
     // Create a new pvl to load the data
     ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
@@ -580,7 +580,7 @@ void test_pvl_init_initial_load_error_recover_03() {
 
 void test_pvl_save_error_fail_01() {
     printf("\n[test_pvl_save_error_fail_01]\n");
-    int written_length = 96;
+    int written_length = 88;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -618,7 +618,7 @@ void test_pvl_save_error_fail_01() {
 
 void test_pvl_save_error_fail_02() {
     printf("\n[test_pvl_save_error_fail_02]\n");
-    int written_length = 96;
+    int written_length = 88;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -656,7 +656,7 @@ void test_pvl_save_error_fail_02() {
 
 void test_pvl_save_error_fail_03() {
     printf("\n[test_pvl_save_error_fail_03]\n");
-    int written_length = 96;
+    int written_length = 88;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -694,7 +694,7 @@ void test_pvl_save_error_fail_03() {
 
 void test_pvl_save_error_fail_flush() {
     printf("\n[test_pvl_save_error_fail_flush]\n");
-    int written_length = 96;
+    int written_length = 88;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -731,48 +731,9 @@ void test_pvl_save_error_fail_flush() {
     assert(!fclose(save_dest));
 }
 
-void test_pvl_save_error_fail_partial() {
-    printf("\n[test_pvl_save_error_fail_partial]\n");
-    int written_length = 64;
-    int marks_count = 1;
-
-    ctx = (test_ctx){0};
-
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
-    assert(ctx.pvl != NULL);
-
-    char buffer[1024];
-    FILE *save_dest = fmemopen(buffer,sizeof(change_header)+sizeof(mark_header),"w+");
-    // Leave unbufferred so that it fails at fflush
-    //setbuf(save_dest, NULL);
-
-    ctx.pre_save[0].return_file = save_dest;
-    ctx.pre_save[0].expected_pvl = ctx.pvl;
-    ctx.pre_save[0].expected_full = 0;
-    ctx.pre_save[0].expected_length = written_length;
-
-    ctx.post_save[0].return_int = 0;
-    ctx.post_save[0].expected_pvl = ctx.pvl;
-    ctx.post_save[0].expected_full = 0;
-    ctx.post_save[0].expected_length = written_length;
-    ctx.post_save[0].expected_file = save_dest;
-    ctx.post_save[0].expected_failed = 1;
-
-    // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
-    memset(ctx.buf, 1, 64);
-    assert(!pvl_mark(ctx.pvl, ctx.buf, 32));
-    assert(pvl_mark(ctx.pvl, ctx.buf, 64));
-
-    assert(ctx.pre_save_pos == 1);
-    assert(ctx.post_save_pos == 1);
-
-    assert(!fclose(save_dest));
-}
-
 void test_pvl_save_no_destination() {
     printf("\n[test_pvl_save_no_destination]\n");
-    int written_length = 96;
+    int written_length = 88;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -814,7 +775,7 @@ void test_leak_no_mirror() {
 
 void test_leak_detected() {
     printf("\n[test_leak]\n");
-    int written_length = 64;
+    int written_length = 56;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -853,7 +814,7 @@ void test_leak_detected() {
 
 void test_leak_no_leak() {
     printf("\n[test_leak]\n");
-    int written_length = 64;
+    int written_length = 56;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -911,7 +872,6 @@ int main() {
     test_pvl_save_error_fail_02();
     test_pvl_save_error_fail_03();
     test_pvl_save_error_fail_flush();
-    test_pvl_save_error_fail_partial();
 
     test_pvl_save_no_destination();
 
