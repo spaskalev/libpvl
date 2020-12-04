@@ -133,7 +133,7 @@ typedef void leak_callback(struct pvl *pvl, void *start, size_t length, int part
  * length             - The lenght of the pvl-managed memory block
  * mirror             - Pointer to the start of a pvl-managed mirror memory block
  *                      that is used for additional capabilities like
- *                      leak detection and fast rollback.
+ *                      leak detection.
  *                      Set to NULL to disable the additional capabilities.
  * pre_load_cb        - Callback for loading changes. It will be called immediately if set.
  * post_load_cb       - Callback for acknowledging loaded changes
@@ -170,10 +170,3 @@ int pvl_mark(struct pvl *pvl, char *start, size_t length);
  * Persist the marked spans and clear marks.
  */
 int pvl_commit(struct pvl *pvl);
-
-/*
- * Rollback any marked changes. If a mirror is available it will
- * be used to rollback the changes. Otherwise the load callback
- * will be used to restore the state.
- */
-int pvl_rollback(struct pvl *pvl);

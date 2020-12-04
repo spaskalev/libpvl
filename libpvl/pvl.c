@@ -213,38 +213,6 @@ int pvl_commit(struct pvl *pvl) {
     return pvl_save(pvl, 0);
 }
 
-int pvl_rollback(struct pvl *pvl) {
-    if (pvl == NULL) {
-        return 1;
-    }
-
-    if (!pvl->in_transaction) {
-        return 1;
-    }
-
-    if (pvl->mirror != NULL) {
-        if (pvl->partial) {
-            // Perform a full copy
-            memcpy(pvl->main, pvl->mirror, pvl->length);
-            pvl->partial = 0;
-            pvl_clear_marks(pvl);
-            return 0;
-        } // else
-        for (size_t i = 0; i < pvl->marks_index; i++) {
-            ptrdiff_t offset = pvl->marks[i].start - pvl->main;
-            memcpy(pvl->marks[i].start, pvl->mirror+offset, pvl->marks[i].length);
-            pvl->marks[i] = (mark){0};
-        }
-        pvl->marks_index = 0;
-        return 0;
-    } // else
-    pvl_clear_marks(pvl);
-    pvl->in_transaction = 0;
-    pvl_clear_memory(pvl);
-
-    return pvl_load(pvl, 1, pvl->last_save_file, pvl->last_save_pos);
-}
-
 static void pvl_clear_memory(struct pvl *pvl) {
     memset(pvl->main, 0, pvl->length);
     if (pvl->mirror) {

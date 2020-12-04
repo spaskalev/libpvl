@@ -51,10 +51,6 @@ The span location has to fall in the memory span that the struct pvl\* instance 
 
 Call pvl_commit(struct pvl\*) to make libpvl persist the currently-marked spans.
 
-### Canceling changes
-
-Call pvl_rollback(struct pvl\*) to make libpvl abandon the currently-marked spans.
-
 ## Troubleshooting
 
 ### Detecting leaks

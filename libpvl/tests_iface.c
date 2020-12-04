@@ -301,19 +301,6 @@ void test_commit_over_max_marks() {
     assert(!pvl_commit(pvl));
 }
 
-void test_rollback_pvl_null() {
-    struct pvl *pvl = NULL;
-    // pass some garbage
-    assert(pvl_rollback(pvl));
-}
-
-void test_rollback_no_begin() {
-    alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
-    char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 512, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(pvl_rollback(pvl));
-}
-
 int main() {
     test_init_misalignment();
     test_init_alignment();
@@ -354,9 +341,6 @@ int main() {
     test_commit_single_mark();
     test_commit_max_marks();
     test_commit_over_max_marks();
-
-    test_rollback_pvl_null();
-    test_rollback_no_begin();
 
     return 0;
 }
