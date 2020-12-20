@@ -20,7 +20,7 @@ TEST_LINE_COV="100"
 
 IMPL_GUARD="WARNING_DO_NOT_INCLUDE_PLV_C"
 
-CC="gcc"
+CC="clang"
 
 GC_BASE_OPTS="-g -fstrict-aliasing -fstack-protector-all -pedantic -Wall -Wextra -Werror -Wfatal-errors"
 GC_SANS_OPTS="-fno-omit-frame-pointer -fsanitize=leak,address,undefined -fno-sanitize-recover=all"
