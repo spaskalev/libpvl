@@ -37,7 +37,6 @@ void test_basic_commit() {
     ctx.post_save[0].expected_failed = 0;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
     assert(!pvl_commit(ctx.pvl));
@@ -106,7 +105,6 @@ void test_basic_commit_mirror() {
     ctx.post_save[0].expected_failed = 0;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
     assert(!pvl_commit(ctx.pvl));

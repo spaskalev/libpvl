@@ -153,11 +153,6 @@ struct pvl *pvl_init(char *at, size_t marks,
     leak_callback leak_cb);
 
 /*
- * Begin a new entry. Used primarily as a safety check.
- */
-int pvl_begin(struct pvl *pvl);
-
-/*
  * Mark a span of memory for inclusion in the next commit.
  */
 int pvl_mark(struct pvl *pvl, char *start, size_t length);

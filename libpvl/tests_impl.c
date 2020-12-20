@@ -28,7 +28,6 @@ void test_coalesce_one_mark() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
     char main_mem[1024];
     struct pvl *pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(!pvl_begin(pvl));
     assert(!pvl_mark(pvl, main_mem, 1));
     size_t marks = pvl->marks_index;
     assert(!pvl_coalesce_marks(pvl));
@@ -40,7 +39,6 @@ void test_coalesce_many_marks() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
     char main_mem[1024];
     struct pvl *pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(!pvl_begin(pvl));
     assert(!pvl_mark(pvl, main_mem, 1));
     assert(!pvl_mark(pvl, main_mem+10, 1));
     assert(2 == pvl->marks_index);
@@ -53,7 +51,6 @@ void test_coalesce_overlapping_marks() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
     char main_mem[1024];
     struct pvl *pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(!pvl_begin(pvl));
     assert(!pvl_mark(pvl, main_mem, 10));
     assert(!pvl_mark(pvl, main_mem+5, 15));
     assert(2 == pvl->marks_index);
@@ -68,7 +65,6 @@ void test_coalesce_continuous_marks() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
     char main_mem[1024];
     struct pvl *pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(!pvl_begin(pvl));
     assert(!pvl_mark(pvl, main_mem, 10));
     assert(!pvl_mark(pvl, main_mem+10, 20));
     assert(!pvl_mark(pvl, main_mem+100, 20));
@@ -146,7 +142,6 @@ void test_pvl_init_initial_load_error_fail_01() {
     ctx.post_save[0].expected_failed = 0;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
     assert(!pvl_commit(ctx.pvl));
@@ -210,7 +205,6 @@ void test_pvl_init_initial_load_error_recover_01() {
     ctx.post_save[0].expected_failed = 0;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
     assert(!pvl_commit(ctx.pvl));
@@ -298,7 +292,6 @@ void test_pvl_init_initial_load_error_fail_02() {
     ctx.post_save[0].expected_failed = 0;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
     assert(!pvl_commit(ctx.pvl));
@@ -363,7 +356,6 @@ void test_pvl_init_initial_load_error_recover_02() {
     ctx.post_save[0].expected_failed = 0;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
     assert(!pvl_commit(ctx.pvl));
@@ -451,7 +443,6 @@ void test_pvl_init_initial_load_error_fail_03() {
     ctx.post_save[0].expected_failed = 0;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
     assert(!pvl_commit(ctx.pvl));
@@ -515,7 +506,6 @@ void test_pvl_init_initial_load_error_recover_03() {
     ctx.post_save[0].expected_failed = 0;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
     assert(!pvl_commit(ctx.pvl));
@@ -605,7 +595,6 @@ void test_pvl_save_error_fail_01() {
     ctx.post_save[0].expected_failed = 1;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
     assert(pvl_commit(ctx.pvl));
@@ -643,7 +632,6 @@ void test_pvl_save_error_fail_02() {
     ctx.post_save[0].expected_failed = 1;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
     assert(pvl_commit(ctx.pvl));
@@ -681,7 +669,6 @@ void test_pvl_save_error_fail_03() {
     ctx.post_save[0].expected_failed = 1;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
     assert(pvl_commit(ctx.pvl));
@@ -720,7 +707,6 @@ void test_pvl_save_error_fail_flush() {
     ctx.post_save[0].expected_failed = 1;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
     assert(pvl_commit(ctx.pvl));
@@ -754,7 +740,6 @@ void test_pvl_save_no_destination() {
     ctx.post_save[0].expected_failed = 1;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
     assert(pvl_commit(ctx.pvl));
@@ -802,7 +787,6 @@ void test_leak_detected() {
     ctx.leak[0].expected_partial = 0;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 32));
     assert(!pvl_commit(ctx.pvl));
@@ -836,7 +820,6 @@ void test_leak_no_leak() {
     ctx.post_save[0].expected_failed = 0;
 
     // Write and commit some data
-    assert(!pvl_begin(ctx.pvl));
     memset(ctx.buf, 1, 32);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 32));
     assert(!pvl_commit(ctx.pvl));

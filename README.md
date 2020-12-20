@@ -13,7 +13,7 @@ libpvl is licensed under the 0BSD license. See the LICENSE.md file for details.
 
 ### Abstract IO
 
-libpvl is designed to abstract domain code from IO handling. Domain code has access to a few functions (pvl_begin, pvl_mark, pvl_commit, pvl_rollback) that in turn call callbacks to handle the IO. This makes it easy to use different IO handlers without performing any changes on the domain code. The IO handlers can be anything from no-op or in-memory ones for testing, through regular file-based I/O or even over-the-network replication for high availability. Once the libpvl core is complete development will shift towards a set of IO handlers.
+libpvl is designed to abstract domain code from IO handling. Domain code has access to a few functions (pvl_mark, pvl_commit, pvl_rollback) that in turn call callbacks to handle the IO. This makes it easy to use different IO handlers without performing any changes on the domain code. The IO handlers can be anything from no-op or in-memory ones for testing, through regular file-based I/O or even over-the-network replication for high availability. Once the libpvl core is complete development will shift towards a set of IO handlers.
 
 ### Ease of use
 
@@ -37,13 +37,9 @@ The post-save callback will be called after libpvl has attempted to persist a ch
 
 libpvl's main object type is struct pvl\*, an incomplete type that is initialized by pvl_init(...) at the specified memory location. If the parameters are correct a non-NULL struct pvl\* is returned that can be operated upon by the rest of the functions.
 
-### Before making changes
+### Making changes
 
-Call pvl_begin(struct pvl\*) once for each transaction that you want libpvl to handle. The other functions will fail unless a transaction has begun. This is a safety feature to detect transaction-related bugs in calling code.
-
-### After making changes
-
-Call pvl_mark(struct pvl\*, char*, size_t) to inform libpvl of a span of memory that has been changed. This has to happen in a transaction started by pvl_begin. You can call pvl_mark multiple times in a single transaction.
+Call pvl_mark(struct pvl\*, char*, size_t) to inform libpvl of a span of memory that has been changed.
 
 The span location has to fall in the memory span that the struct pvl\* instance has been configured to manage upon calling pvl_init.
 

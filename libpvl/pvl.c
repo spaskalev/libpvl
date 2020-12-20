@@ -41,7 +41,6 @@ struct pvl {
     pre_save_callback  *pre_save_cb;
     post_save_callback *post_save_cb;
     leak_callback      *leak_cb;
-    int                in_transaction;
     FILE               *last_save_file;
     int                marks_combined;
     long               last_save_pos;
@@ -128,25 +127,8 @@ struct pvl *pvl_init(char *at, size_t marks, char *main, size_t length, char *mi
     return pvl;
 }
 
-int pvl_begin(struct pvl *pvl) {
-    if (pvl == NULL) {
-        return 1;
-    }
-
-    if (pvl->in_transaction) {
-        return 1;
-    }
-
-    pvl->in_transaction = 1;
-    return 0;
-}
-
 int pvl_mark(struct pvl *pvl, char *start, size_t length) {
     if (pvl == NULL) {
-        return 1;
-    }
-
-    if (!pvl->in_transaction) {
         return 1;
     }
 
@@ -239,20 +221,12 @@ int pvl_commit(struct pvl *pvl) {
     }
 
     /*
-     * Commit may not be called outside of a transaction
-     */
-    if (!pvl->in_transaction) {
-        return 1;
-    }
-
-    /*
      * Commit may not be called without marks
      */
     if (! pvl->marks_index) {
         return 1;
     }
 
-    pvl->in_transaction = 0;
     pvl->marks_combined = 0;
     return pvl_save(pvl);
 }
