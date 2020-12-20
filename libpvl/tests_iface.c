@@ -199,7 +199,7 @@ void test_commit_no_mark() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(pvl_commit(pvl));
+    assert(!pvl_commit(pvl));
 }
 
 void test_commit_single_mark() {

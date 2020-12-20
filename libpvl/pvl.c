@@ -221,10 +221,10 @@ int pvl_commit(struct pvl *pvl) {
     }
 
     /*
-     * Commit may not be called without marks
+     * Commit with no marks is a no-op
      */
     if (! pvl->marks_index) {
-        return 1;
+        return 0;
     }
 
     pvl->marks_combined = 0;
