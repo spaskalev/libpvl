@@ -112,7 +112,7 @@ FILE *pre_save(struct pvl *pvl, int full, size_t length) {
     assert(pvl == fix.expected_pvl);
     printf("  full: %d expected: %d\n", full, fix.expected_full);
     assert(full == fix.expected_full);
-    printf("length: %ld expected: %ld\n", length, fix.expected_length);
+    printf("length: %zu expected: %zu\n", length, fix.expected_length);
     assert(length == fix.expected_length);
     ctx.pre_save_pos++;
     return fix.return_file;
@@ -125,7 +125,7 @@ int post_save(struct pvl *pvl, int full, size_t length, FILE *file, int failed) 
     assert(pvl == fix.expected_pvl);
     printf("  full: %d expected: %d\n", full, fix.expected_full);
     assert(full == fix.expected_full);
-    printf("length: %ld expected: %ld\n", length, fix.expected_length);
+    printf("length: %zu expected: %zu\n", length, fix.expected_length);
     assert(length == fix.expected_length);
     printf("  file: %p expected: %p\n", (void*) file, (void*) fix.expected_file);
     assert(file == fix.expected_file);
@@ -142,7 +142,7 @@ void leak(struct pvl *pvl, void *start, size_t length, int partial) {
     assert(pvl == fix.expected_pvl);
     printf("  start: %p expected: %p\n", start, fix.expected_start);
     assert(start == fix.expected_start);
-    printf(" length: %ld expected: %ld\n", length, fix.expected_length);
+    printf(" length: %zu expected: %zu\n", length, fix.expected_length);
     assert(length == fix.expected_length);
     printf("partial: %d expected: %d\n", partial, fix.expected_partial);
     assert(partial == fix.expected_partial);
