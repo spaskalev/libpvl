@@ -4,13 +4,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "pvl.h"
+/*
+ * Define the guard to test implementation details
+ */
+#define WARNING_DO_NOT_INCLUDE_PLV_C
+#include "pvl.c"
 
 #include "tests_common.h"
 
 void test_basic_commit() {
     printf("\n[test_basic_commit]\n");
-    int written_length = 88;
+    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
@@ -79,7 +83,7 @@ void test_basic_commit() {
 
 void test_basic_commit_mirror() {
     printf("\n[test_basic_commit_mirror]\n");
-    int written_length = 88;
+    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
     int marks_count = 10;
 
     ctx = (test_ctx){0};
