@@ -49,7 +49,14 @@ function compile_and_run_static_test() {
 
 function verify_coverage() {
     llvm-cov-7 gcov -b tests.c | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
-    ! grep  '#####:' *.gcov
+    if grep  '#####:' *.gcov; then
+        echo "Non-covered lines found."
+        false
+    fi
+    if grep -E '^branch\s*[0-9]? never executed$' *.gcov; then
+        echo "Non-covered branches found."
+        false
+    fi
 }
 
 function test_shared() {
