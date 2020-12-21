@@ -10,11 +10,6 @@ LIB_OBJECT="libpvl.o"
 LIB_SHARED="libpvl.so"
 LIB_STATIC="libpvl.a"
 
-LIB_LINE_COV="100"
-LIB_BRANCH_COV="99"
-
-TEST_LINE_COV="100"
-
 IMPL_GUARD="WARNING_DO_NOT_INCLUDE_PLV_C"
 
 CC="clang"
@@ -53,17 +48,8 @@ function compile_and_run_static_test() {
 }
 
 function verify_coverage() {
-    llvm-cov-7 gcov $@
-    false
-    #mkdir -p gcovr
-    #rm -f gcovr/*.html
-    # Generate full coverage report
-    #gcovr --use-gcov-files --html-details --output gcovr/coverage.html
-    # Enforce lib coverage
-    #gcovr --use-gcov-files --exclude 'tests_.*' --fail-under-line ${LIB_LINE_COV}
-    #gcovr --use-gcov-files --exclude 'tests_.*' --branches --fail-under-branch ${LIB_BRANCH_COV}
-    # Enforce test coverage
-    #gcovr --use-gcov-files --filter 'tests_.*' --fail-under-line ${TEST_LINE_COV}
+    llvm-cov-7 gcov -b tests.c | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
+    ! grep  '#####:' *.gcov
 }
 
 function test_shared() {
@@ -101,13 +87,13 @@ function test_optlevels() {
         GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD}"
         GC_TEST_OPTS="${GC_BASE_OPTS}"
         test_shared $@
-        #test_static $@
+        test_static $@
     done
 }
 
 function test() {
     test_coverage $@
-    test_optlevels $@
+    #test_optlevels $@
 }
 
 test ${TEST_SRC}
