@@ -158,6 +158,6 @@ struct pvl *pvl_init(char *at, size_t marks,
 int pvl_mark(struct pvl *pvl, char *start, size_t length);
 
 /*
- * Persist the marked spans and clear marks.
+ * Persist the marked spans.
  */
 int pvl_commit(struct pvl *pvl);

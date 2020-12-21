@@ -2,10 +2,7 @@
 set -eE
 set -x
 
-TEST_SRC_IFACE="tests_iface.c"
-TEST_SRC_IMPL="tests_impl.c"
-TEST_SRC_E2E="tests_e2e.c"
-# Use a single test binary - this way debug.sh stays simple :)
+TEST_SRC="tests.c"
 TEST_BIN="tests.out"
 
 LIB_SRC="pvl.c"
@@ -56,15 +53,17 @@ function compile_and_run_static_test() {
 }
 
 function verify_coverage() {
-    mkdir -p gcovr
-    rm -f gcovr/*.html
+    llvm-cov-7 gcov $@
+    false
+    #mkdir -p gcovr
+    #rm -f gcovr/*.html
     # Generate full coverage report
-    gcovr --html-details --output gcovr/coverage.html
+    #gcovr --use-gcov-files --html-details --output gcovr/coverage.html
     # Enforce lib coverage
-    # gcovr --exclude 'tests_.*' --fail-under-line ${LIB_LINE_COV}
-    # gcovr --exclude 'tests_.*' --branches --fail-under-branch ${LIB_BRANCH_COV}
+    #gcovr --use-gcov-files --exclude 'tests_.*' --fail-under-line ${LIB_LINE_COV}
+    #gcovr --use-gcov-files --exclude 'tests_.*' --branches --fail-under-branch ${LIB_BRANCH_COV}
     # Enforce test coverage
-    # gcovr --filter 'tests_.*' --fail-under-line ${TEST_LINE_COV}
+    #gcovr --use-gcov-files --filter 'tests_.*' --fail-under-line ${TEST_LINE_COV}
 }
 
 function test_shared() {
@@ -85,28 +84,14 @@ function test_static() {
     done
 }
 
-function test_debug() {
-    GC_OPT_LEVEL="-Og -O0"
-    GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD} ${GC_SANS_OPTS}"
-    GC_TEST_OPTS="${GC_BASE_OPTS} ${GC_SANS_OPTS}"
-    test_shared $@
-    GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD}"
-    GC_TEST_OPTS="${GC_BASE_OPTS}"
-    test_static $@
-}
-
 function test_coverage() {
-    if [ "${CC}" != "gcc" ]; then
-        echo "Skipping coverage for compiler ${CC}"
-        return 0
-    fi
-    GC_OPT_LEVEL="-O0"
+    GC_OPT_LEVEL="-Og -O0"
     GC_LIB_OPTS="${GC_BASE_OPTS} -D${IMPL_GUARD} --coverage"
     GC_TEST_OPTS="${GC_BASE_OPTS} --coverage"
-    test_shared $@
-    verify_coverage
-    #test_static $@
-    #verify_coverage
+    rm -f *.gcov *.gcno *.gcda
+    #test_shared $@
+    test_static $@
+    verify_coverage $@
 }
 
 function test_optlevels() {
@@ -121,9 +106,8 @@ function test_optlevels() {
 }
 
 function test() {
-    test_debug $@
     test_coverage $@
     test_optlevels $@
 }
 
-test ${TEST_SRC_IFACE} ${TEST_SRC_IMPL} ${TEST_SRC_E2E}
+test ${TEST_SRC}
