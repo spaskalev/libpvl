@@ -35,9 +35,9 @@ struct pvl;
 /*
  * .. that a caller can allocate.
  *
- * Pass the number of marks that you want to keep.
+ * span_count must match with pvl_init
  */
-size_t pvl_sizeof(size_t marks);
+size_t pvl_sizeof(size_t span_size);
 
 /*
  * Callback for preparing to load a change
@@ -112,12 +112,11 @@ typedef int post_save_callback(struct pvl *pvl, int full, size_t length, FILE *f
  * Passed parameters
  * - Start location of the leaked area
  * - Length of the leaked area
- * - Probable false positive flag
  *
  * Returns
  * - Nothing
  */
-typedef void leak_callback(struct pvl *pvl, void *start, size_t length, int probable);
+typedef void leak_callback(struct pvl *pvl, void *start, size_t length);
 
 /*
  * Initialize pvl_t at the provided location.
@@ -127,9 +126,10 @@ typedef void leak_callback(struct pvl *pvl, void *start, size_t length, int prob
  * Passed parameters
  *
  * at                 - Pointer to where the pvl object should be initialized
- * marks              - Number of marks to store.
+ * span_count         - Span count to allocate to track changes
  * main               - Pointer to the start of a pvl-managed memory block
  * length             - The lenght of the pvl-managed memory block
+ *                      It must be divisible by span_count.
  * mirror             - Pointer to the start of a pvl-managed mirror memory block
  *                      that is used for additional capabilities like
  *                      leak detection.
@@ -146,7 +146,7 @@ typedef void leak_callback(struct pvl *pvl, void *start, size_t length, int prob
  * pvl_t*             - A valid pointer to pvl_t in the case of a successful initialization,
  *                      NULL otherwise.
  */
-struct pvl *pvl_init(char *at, size_t marks,
+struct pvl *pvl_init(char *at, size_t span_count,
     char *main, size_t length, char *mirror,
     pre_load_callback pre_load_cb, post_load_callback post_load_cb,
     pre_save_callback pre_save_cb, post_save_callback post_save_cb,

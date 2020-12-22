@@ -16,21 +16,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "pvl.h"
 
-typedef struct {
-    char   *start;
-    size_t length;
-} mark;
-
-typedef struct {
-    size_t change_count;
-} change_header;
-
-typedef struct {
-    ptrdiff_t start;
-    size_t    length;
-} mark_header;
+/*
+ * Based on http://c-faq.com/misc/bitsets.html
+ */
+#define BITSET_SIZE(size) ((size + CHAR_BIT - 1) / CHAR_BIT)
+#define BITSET_POS(pos) ((pos) / CHAR_BIT)
+#define BITSET_MASK(pos) (1 << ((pos) % CHAR_BIT))
+#define BITSET_SET(name, pos) ((name)[BITSET_POS(pos)] |= BITSET_MASK(pos))
+#define BITSET_RESET(name, pos) ((name)[BITSET_POS(pos)] *= ~BITSET_MASK(pos))
+#define BITSET_TEST(name, pos) ((name)[BITSET_POS(pos)] & BITSET_MASK(pos))
 
 struct pvl {
     char               *main;
@@ -42,73 +39,97 @@ struct pvl {
     post_save_callback *post_save_cb;
     leak_callback      *leak_cb;
     FILE               *last_save_file;
-    int                marks_combined;
     long               last_save_pos;
-    size_t             marks_index;
-    size_t             marks_count;
-    mark               marks[];
+    _Bool              dirty;
+    /*
+     * The field order bellow is used by pvl_save()
+     */
+    size_t             span_length;
+    size_t             span_count;
+    char               spans[];
 };
 
-size_t pvl_sizeof(size_t marks) {
-    return sizeof(struct pvl)+(marks * sizeof(mark));
+size_t pvl_sizeof(size_t span_count) {
+    return sizeof(struct pvl)+(BITSET_SIZE(span_count) * sizeof(char));
 }
 
 static int pvl_load(struct pvl *pvl, int initial, FILE *req_from, long req_pos);
 static int pvl_save(struct pvl *pvl);
-//static void pvl_clear_marks(struct pvl *pvl);
 static void pvl_clear_memory(struct pvl *pvl);
-static int pvl_coalesce_marks(struct pvl *pvl);
 static void pvl_detect_leaks(struct pvl *pvl);
 static void pvl_detect_leaks_inner(struct pvl *pvl, size_t from, size_t to);
 
-struct pvl *pvl_init(char *at, size_t marks, char *main, size_t length, char *mirror,
+struct pvl *pvl_init(char *at, size_t span_count, char *main, size_t length, char *mirror,
     pre_load_callback pre_load_cb, post_load_callback post_load_cb,
     pre_save_callback pre_save_cb, post_save_callback post_save_cb,
     leak_callback leak_cb) {
-    // Check for alignment
+    /*
+     * Check for alignment
+     */
     size_t alignment = ((uintptr_t) at) % alignof(max_align_t);
     if (alignment != 0) {
-        return NULL; // Invalid alignment
+        return NULL;
     }
 
+    /*
+     * Leak detection requires a mirror
+     */
     if ((!mirror) && leak_cb) {
-        // Cannot have leak detection without a mirror
+
+        return NULL;
+    }
+
+    /*
+     * Check for overlap between main and mirror blocks
+     */
+    if (mirror != NULL) {
+        if (((mirror <= main) && ((mirror+length) > main)) ||
+            ((main <= mirror) && ((main+length) > mirror))) {
+            return NULL;
+        }
+    }
+
+    /*
+     * main must not be NULL
+     */
+    if (main == NULL) {
+        return NULL;
+    }
+
+    /*
+     * length must be positive
+     */
+    if (length == 0) {
+        return NULL;
+    }
+
+    /*
+     * span_count must be positive
+     */
+    if (span_count == 0) {
+        return NULL;
+    }
+
+    /*
+     * length must be divisible by span_count
+     */
+    if (length % span_count) {
         return NULL;
     }
 
     struct pvl *pvl = (struct pvl*) at;
 
-    // Ensure we don't have garbage. The custom sizeof function will
-    // account for the flexible array at the end of the structure,
-    // so there is no need to call pvl_clear_marks.
-    memset(pvl, 0, pvl_sizeof(marks));
+    /*
+     * Zero the pvl destination. The custom sizeof function will
+     * account for the flexible array at the end of the structure.
+     */
+    memset(pvl, 0, pvl_sizeof(span_count));
 
-    if (marks == 0) {
-        return NULL;
-    }
-    pvl->marks_count = marks;
-
-    if (main == NULL) {
-        return NULL;
-    }
+    pvl->span_count = span_count;
     pvl->main = main;
-
-    if (length == 0) {
-        return NULL;
-    }
     pvl->length = length;
-
-    if (mirror != NULL) {
-        // Check for main/mirror overlap
-        if (((mirror <= main) && ((mirror+length) > main)) ||
-            ((main <= mirror) && ((main+length) > mirror))) {
-            return NULL;
-        }
-        pvl->mirror = mirror;
-    }
-
-    // Clear the main memory
-    pvl_clear_memory(pvl);
+    pvl->mirror = mirror;
+    pvl->span_length = pvl->length / pvl->span_count;
 
     // Callbacks are checked at call sites
     pvl->pre_load_cb = pre_load_cb;
@@ -132,86 +153,25 @@ int pvl_mark(struct pvl *pvl, char *start, size_t length) {
         return 1;
     }
 
-    // Validate mark
+    /*
+     * Validate the span
+     */
     if ((length == 0) || (start < pvl->main)
             || ((start+length) > (pvl->main+pvl->length))) {
         return 1;
     }
 
-    // Add it to the marks list if there is an available slot
-    if (pvl->marks_index < pvl->marks_count) {
-        pvl->marks[pvl->marks_index].start = start;
-        pvl->marks[pvl->marks_index].length = length;
-        pvl->marks_index++;
-    } else {
-		// TODO add a flag to prevent constant coalescing
-        // Mark slots are full, need to coalesce them
-		if (pvl_coalesce_marks(pvl)) {
-			// Recurse - this add will pass since at least one mark was coalesced
-			return pvl_mark(pvl, start, length);
-		}
+    /*
+     * Set the matching spans
+     */
+    size_t from_pos = (start - pvl->main) / pvl->span_length;
+    size_t to_pos = ((start+length) - pvl->main) / pvl->span_length;
 
-        // Marks cannot be coalesced, need to be combined
-
-        // No action required if new mark is contained or contains a current mark
-        // Use marks_count as the sentinel value to avoid size_t underflow in
-        // left-of/right-of calculations
-        size_t closest_next = pvl->marks_count;
-        size_t closest_prev = pvl->marks_count;
-        for (size_t i = 0; i < pvl->marks_index; i++) {
-			if (start >= pvl->marks[i].start && length <= pvl->marks[i].length) {
-				// New mark is already contained, nothing more to do
-				return 0;
-			}
-			if (start <= pvl->marks[i].start && length >= pvl->marks[i].length) {
-				// New mark contains current mark, swap
-				pvl->marks[i].start = start;
-				pvl->marks[i].length = length;
-				return 0;
-			}
-			if (length > pvl->marks[i].length) { // right-of
-				if (closest_prev == pvl->marks_count) {
-					closest_prev = i;
-				} else {
-					if ((length - pvl->marks[i].length) < (length - pvl->marks[closest_prev].length)) {
-						closest_prev = i;
-					}
-				}
-			}
-			if (start < pvl->marks[i].start) { // left of
-				if (closest_next == pvl->marks_count) {
-					closest_next = i;
-				} else {
-					if ((pvl->marks[i].start - start) < (pvl->marks[closest_next].start - start)) {
-						closest_next = i;
-					}
-				}
-			}
-		}
-		
-		// At this point either one or both are set
-		if ((closest_next != pvl->marks_count) && (closest_prev != pvl->marks_count)) {
-			size_t next_distance = pvl->marks[closest_next].start - start;
-			size_t prev_distance = length - pvl->marks[closest_prev].length;
-			if (next_distance <= prev_distance) {
-				// use next
-				closest_prev = pvl->marks_count;
-			} else {
-				// use prev
-				closest_next = pvl->marks_count;
-			}
-		}
-		
-		// if mark is not contained - extend closest mark
-		if (closest_next != pvl->marks_count) {
-			pvl->marks[closest_next].start = start;
-		} else {
-			pvl->marks[closest_prev].length = length;
-		}
-
-		pvl->marks_combined = 1;
-        return 0;
+    for (size_t i = from_pos; i <= to_pos; i++) {
+        BITSET_SET(pvl->spans, i);
     }
+
+    pvl->dirty = 1;
     return 0;
 }
 
@@ -223,11 +183,10 @@ int pvl_commit(struct pvl *pvl) {
     /*
      * Commit with no marks is a no-op
      */
-    if (! pvl->marks_index) {
+    if (! pvl->dirty) {
         return 0;
     }
 
-    pvl->marks_combined = 0;
     return pvl_save(pvl);
 }
 
@@ -238,72 +197,10 @@ static void pvl_clear_memory(struct pvl *pvl) {
     }
 }
 
-//static void pvl_clear_marks(struct pvl *pvl) {
-//    memset(pvl->marks, 0, pvl->marks_count * sizeof(mark));
-//    pvl->marks_index = 0;
-//}
-
-static int pvl_mark_compare(const void *a, const void *b) {
-    mark *mark_a = (mark*)a;
-    mark *mark_b = (mark*)b;
-    if (mark_a->start > mark_b->start) {
-        return 1;
-    }
-    if (mark_a->start < mark_b->start) {
-        return -1;
-    }
-    // Equal start locations
-    return 0;
-}
-
-static int pvl_coalesce_marks(struct pvl *pvl) {
-    int coalesced = 0;
-    qsort(pvl->marks, pvl->marks_index, sizeof(mark), pvl_mark_compare);
-    for (size_t i = 0; i < pvl->marks_index;) {
-        size_t j = i+1;
-        for (; j < pvl->marks_index; j++) {
-            if ((pvl->marks[i].start + pvl->marks[i].length) >= pvl->marks[j].start) {
-                // Coalesce overlapping or continuous marks
-                pvl->marks[i].length = pvl->marks[j].length;
-                // Clear the next mark
-                pvl->marks[j] = (mark){0};
-                // Raise the flag
-                coalesced = 1;
-            } else {
-                break;
-            }
-        }
-        i = j; // Advance
-    }
-    if (coalesced) {
-        // Put the cleared marks slots at the end
-        for(size_t i = 0; i < pvl->marks_index; i++) {
-            if (pvl->marks[i].start) {
-                continue;
-            }
-            pvl->marks_index = i;
-            for (size_t j = i+1; j < pvl->marks_count; j++) {
-                if (! pvl->marks[j].start) {
-                    continue;
-                }
-                pvl->marks[i] = pvl->marks[j];
-                pvl->marks[j] = (mark){0};
-                pvl->marks_index = j;
-            }
-        }
-    }
-    return coalesced;
-}
-
 /*
  * Save the currently-marked memory content
  */
 static int pvl_save(struct pvl *pvl) {
-    /*
-     * Merge overlapping and/or continuous marks
-     */
-    pvl_coalesce_marks(pvl);
-
     /*
      * Perform leak detection
      */
@@ -321,11 +218,15 @@ static int pvl_save(struct pvl *pvl) {
     /*
      * Calculate the total size of the change
      */
-    size_t total = sizeof(change_header);
-    for (size_t i = 0; i < pvl->marks_index; i++) {
-        total += sizeof(mark_header);
-        total += pvl->marks[i].length;
+    ptrdiff_t base_size = (pvl->spans) - (char*)(&pvl->span_length);
+    size_t header_size = base_size + (BITSET_SIZE(pvl->span_count) * sizeof(char));
+    size_t content_size = 0;
+    for (size_t i = 0; i < pvl->span_count; i++) {
+        if (BITSET_TEST(pvl->spans, i)) {
+            content_size += pvl->span_length;
+        }
     }
+    size_t total = header_size + content_size;
 
     /*
      * Determine whether this is a full change
@@ -349,27 +250,22 @@ static int pvl_save(struct pvl *pvl) {
     /*
      * Construct and save the header
      */
-    change_header change_header = {0};
-    change_header.change_count = pvl->marks_index;
-    if (fwrite(&change_header, sizeof(change_header), 1, file) != 1) {
+    if (fwrite(&pvl->span_length, header_size, 1, file) != 1) {
         (pvl->post_save_cb)(pvl, full, total, file, 1);
         return 1;
     }
 
     /*
-     * Construct and save each change
+     * Save each span
+     *
+     * TODO: optimize for continuous spans
      */
-    for (size_t i = 0; i < pvl->marks_index; i++) {
-        mark_header change = {0};
-        change.start = pvl->marks[i].start - pvl->main;
-        change.length = pvl->marks[i].length;
-        if (fwrite(&change, sizeof(mark_header), 1, file) != 1) {
-            (pvl->post_save_cb)(pvl, full, total, file, 1);
-            return 1;
-        }
-        if (fwrite(pvl->marks[i].start, pvl->marks[i].length, 1, file) != 1) {
-            (pvl->post_save_cb)(pvl, full, total, file, 1);
-            return 1;
+    for (size_t i = 0; i < pvl->span_count; i++) {
+        if (BITSET_TEST(pvl->spans, i)) {
+            if (fwrite(pvl->main + (i*pvl->span_length), pvl->span_length, 1, file) != 1) {
+                (pvl->post_save_cb)(pvl, full, total, file, 1);
+                return 1;
+            }
         }
     }
 
@@ -383,12 +279,11 @@ static int pvl_save(struct pvl *pvl) {
 
     /*
      * Apply to mirror
+     *
+     * TODO: optimize, dumb version for now
      */
     if (pvl->mirror) {
-		for (size_t i = 0; i < pvl->marks_index; i++) {
-			ptrdiff_t offset = pvl->marks[i].start - pvl->main;
-			memcpy(pvl->mirror+offset, pvl->marks[i].start, pvl->marks[i].length);
-		}
+		memcpy(pvl->mirror, pvl->main, pvl->length);
     }
 
     /*
@@ -396,6 +291,11 @@ static int pvl_save(struct pvl *pvl) {
      */
     (pvl->post_save_cb)(pvl, full, total, file, 0);
 
+    /*
+     * TODO zero out span info
+     */
+
+    pvl->dirty = 0;
     return 0;
 }
 
@@ -437,10 +337,11 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
         /*
          * Try to load a change from it
          */
-        change_header change_header = {0};
         last_good_pos = ftell(file);
+        ptrdiff_t base_size = (pvl->spans) - (char*)(&pvl->span_length);
+        size_t header_size = base_size + (BITSET_SIZE(pvl->span_count) * sizeof(char));
 
-        if (fread(&change_header, sizeof(change_header), 1, file) != 1) {
+        if (fread(&pvl->span_length, header_size, 1, file) != 1) {
             // Couldn't load the change, signal the callback
             if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
                 reset_load = 1;
@@ -450,27 +351,23 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
         }
 
         /*
-         * Read each mark header and content
+         * Read each span
          */
-        for (size_t i = 0; i < change_header.change_count; i++) {
-            mark_header change = {0};
-            if (fread(&change, sizeof(mark_header), 1, file) != 1) {
-                // Couldn't load the change, signal the callback
-                if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
-                    reset_load = 1;
-                    goto read_loop;
+        for (size_t i = 0; i < pvl->span_count; i++) {
+            if (BITSET_TEST(pvl->spans, i)) {
+                if (fread(pvl->main + (i*pvl->span_length), pvl->span_length, 1, file) != 1) {
+                    // Couldn't load the change, signal the callback
+                    if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
+                        reset_load = 1;
+                        goto read_loop;
+                    }
+                    return 1;
                 }
-                return 1;
-            }
-            if (fread(pvl->main+change.start, change.length, 1, file) != 1) {
-                // Couldn't load the change, signal the callback
-                if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
-                    reset_load = 1;
-                    goto read_loop;
-                }
-                return 1;
             }
         }
+        /*
+         * TODO zero out span info
+         */
 
         last_good_pos = ftell(file);
 
@@ -482,7 +379,9 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
             memcpy(pvl->mirror, pvl->main, pvl->length);
         }
 
-        // Report success  via the post-load callback
+        /*
+         * Report success  via the post-load callback
+         */
         if ((pvl->post_load_cb)(pvl, file, 0, last_good_pos)) {
             goto read_loop;
         }
@@ -491,13 +390,14 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
 }
 
 static void pvl_detect_leaks(struct pvl *pvl) {
-    size_t previous = 0;
-    for (size_t i = 0; i < pvl->marks_index; i++) {
-        mark m = pvl->marks[i];
-        pvl_detect_leaks_inner(pvl, previous, m.start - pvl->main);
-        previous = m.start - pvl->main + m.length;
+    /*
+     * Continuous span optimization is not required here :)
+     */
+    for (size_t i = 0; i < pvl->span_count; i++) {
+        if (! BITSET_TEST(pvl->spans, i)) {
+            pvl_detect_leaks_inner(pvl, (i*pvl->span_length), (i*pvl->span_length) + pvl->span_length);
+        }
     }
-    pvl_detect_leaks_inner(pvl, previous, pvl->length);
 }
 
 static void pvl_detect_leaks_inner(struct pvl *pvl, size_t from, size_t to) {
@@ -507,8 +407,7 @@ static void pvl_detect_leaks_inner(struct pvl *pvl, size_t from, size_t to) {
         if (in_diff) {
             if (pvl->main[i] == pvl->mirror[i]) { //diff over
                 // report diff
-                // toggle probable leak detection on combined marks
-                (pvl->leak_cb)(pvl, (pvl->main)+diff_start, i-diff_start, pvl->marks_combined);
+                (pvl->leak_cb)(pvl, (pvl->main)+diff_start, i-diff_start);
                 // clear trackers
                 in_diff = 0;
                 diff_start = 0;

@@ -84,12 +84,10 @@ void test_init_mirror_main_no_overlap() {
     assert(pvl != NULL);
 }
 
-void test_init_leak_no_mirror_leak_cb(struct pvl *pvl, void *start, size_t length, int partial) {
+void test_init_leak_no_mirror_leak_cb(struct pvl *pvl, void *start, size_t length) {
     (void)(pvl);
     (void)(start);
     (void)(length);
-    (void)(partial);
-    // TODO set a flag, fail in the test if the flag is set
 }
 
 void test_init_leak_no_mirror() {
@@ -280,7 +278,6 @@ typedef struct {
     struct pvl *expected_pvl;
     void       *expected_start;
     size_t     expected_length;
-    int        expected_partial;
 } leak_ctx;
 
 typedef struct {
@@ -377,7 +374,7 @@ int post_save(struct pvl *pvl, int full, size_t length, FILE *file, int failed) 
     return fix.return_int;
 }
 
-void leak(struct pvl *pvl, void *start, size_t length, int partial) {
+void leak(struct pvl *pvl, void *start, size_t length) {
     printf("\n    [leak] [%d] \n", ctx.leak_pos);
     leak_ctx fix = ctx.leak[ctx.leak_pos];
     printf("    pvl: %p expected: %p\n", (void*) pvl, (void*) fix.expected_pvl);
@@ -386,8 +383,6 @@ void leak(struct pvl *pvl, void *start, size_t length, int partial) {
     assert(start == fix.expected_start);
     printf(" length: %zu expected: %zu\n", length, fix.expected_length);
     assert(length == fix.expected_length);
-    printf("partial: %d expected: %d\n", partial, fix.expected_partial);
-    assert(partial == fix.expected_partial);
     ctx.leak_pos++;
     return;
 }
@@ -528,110 +523,6 @@ void test_basic_commit_mirror() {
 
     assert(!fclose(ctx.dyn_file));
     free(ctx.dyn_buf);
-}
-
-void test_coalesce_no_marks() {
-    size_t mark_count = 1;
-    alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
-    char main_mem[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    size_t marks = pvl->marks_index;
-    assert(!pvl_coalesce_marks(pvl));
-    assert(marks == pvl->marks_index);
-}
-
-void test_coalesce_one_mark() {
-    size_t mark_count = 1;
-    alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
-    char main_mem[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(!pvl_mark(pvl, main_mem, 1));
-    size_t marks = pvl->marks_index;
-    assert(!pvl_coalesce_marks(pvl));
-    assert(marks == pvl->marks_index);
-}
-
-void test_coalesce_many_marks() {
-    size_t mark_count = 2;
-    alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
-    char main_mem[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(!pvl_mark(pvl, main_mem, 1));
-    assert(!pvl_mark(pvl, main_mem+10, 1));
-    assert(2 == pvl->marks_index);
-    assert(!pvl_coalesce_marks(pvl));
-    assert(2 == pvl->marks_index);
-}
-
-void test_coalesce_overlapping_marks() {
-    size_t mark_count = 3;
-    alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
-    char main_mem[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(!pvl_mark(pvl, main_mem, 10));
-    assert(!pvl_mark(pvl, main_mem+5, 15));
-    assert(2 == pvl->marks_index);
-    assert(pvl_coalesce_marks(pvl));
-    assert(1 == pvl->marks_index);
-    assert(pvl->marks[0].start == main_mem);
-    assert(pvl->marks[0].length == 15);
-}
-
-void test_coalesce_continuous_marks() {
-    size_t mark_count = 3;
-    alignas(max_align_t) char pvlbuf[pvl_sizeof(mark_count)];
-    char main_mem[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, mark_count, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
-    assert(!pvl_mark(pvl, main_mem, 10));
-    assert(!pvl_mark(pvl, main_mem+10, 20));
-    assert(!pvl_mark(pvl, main_mem+100, 20));
-    assert(mark_count == pvl->marks_index);
-    assert(pvl_coalesce_marks(pvl));
-    assert(2 == pvl->marks_index);
-    assert(pvl->marks[0].start == main_mem);
-    assert(pvl->marks[0].length == 20);
-    assert(pvl->marks[1].start == main_mem+100);
-    assert(pvl->marks[1].length == 20);
-}
-
-void test_pvl_mark_compare_null_null() {
-    mark a, b;
-    a = (mark){0};
-    b = (mark){0};
-    assert(pvl_mark_compare(&a, &b) == 0);
-}
-
-void test_pvl_mark_compare_first_larger() {
-    char buf[512];
-    mark a, b;
-    a = (mark){0};
-    b = (mark){0};
-
-    a.start = buf+512;
-    b.start = buf;
-    assert(pvl_mark_compare(&a, &b) == 1);
-}
-
-void test_pvl_mark_compare_first_smaller() {
-    char buf[512];
-    mark a, b;
-    a = (mark){0};
-    b = (mark){0};
-
-    a.start = buf;
-    b.start = buf+512;
-    assert(pvl_mark_compare(&a, &b) == -1);
-}
-
-void test_pvl_mark_compare_equal() {
-    char buf[512];
-    mark a, b;
-    a = (mark){0};
-    b = (mark){0};
-
-    a.start = buf;
-    b.start = buf;
-    assert(pvl_mark_compare(&a, &b) == 0);
 }
 
 void test_pvl_init_initial_load_error_fail_01() {
@@ -1301,7 +1192,6 @@ void test_leak_detected() {
     ctx.leak[0].expected_pvl = ctx.pvl;
     ctx.leak[0].expected_start = ctx.buf+32;
     ctx.leak[0].expected_length = 32;
-    ctx.leak[0].expected_partial = 0;
 
     // Write and commit some data
     memset(ctx.buf, 1, 64);
@@ -1387,17 +1277,6 @@ int main() {
 	}
 
 	{
-		test_coalesce_no_marks();
-		test_coalesce_one_mark();
-		test_coalesce_many_marks();
-		test_coalesce_overlapping_marks();
-		test_coalesce_continuous_marks();
-
-		test_pvl_mark_compare_null_null();
-		test_pvl_mark_compare_first_larger();
-		test_pvl_mark_compare_first_smaller();
-		test_pvl_mark_compare_equal();
-
 		test_pvl_init_initial_load_error_fail_01();
 		test_pvl_init_initial_load_error_recover_01();
 
