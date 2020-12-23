@@ -42,18 +42,25 @@ void test_init_non_null_main() {
     assert(pvl != NULL);
 }
 
-void test_init_zero_legnth() {
+void test_init_zero_length() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char main_mem[1024];
     struct pvl *pvl = pvl_init(pvlbuf, 1, main_mem, 0, NULL, NULL, NULL, NULL, NULL, NULL);
     assert(pvl == NULL);
 }
 
-void test_init_non_zero_legnth() {
+void test_init_non_zero_length() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char main_mem[1024];
     struct pvl *pvl = pvl_init(pvlbuf, 1, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
     assert(pvl != NULL);
+}
+
+void test_init_non_divisible_spans() {
+    alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
+    char main_mem[1024];
+    struct pvl *pvl = pvl_init(pvlbuf, 3, main_mem, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
+    assert(pvl == NULL);
 }
 
 void test_init_main_mirror_overlap() {
@@ -1259,8 +1266,9 @@ int main() {
 		test_init_zero_marks();
 		test_init_null_main();
 		test_init_non_null_main();
-		test_init_zero_legnth();
-		test_init_non_zero_legnth();
+		test_init_zero_length();
+		test_init_non_zero_length();
+		test_init_non_divisible_spans();
 		test_init_main_mirror_overlap();
 		test_init_main_mirror_no_overlap();
 		test_init_mirror_main_overlap();
