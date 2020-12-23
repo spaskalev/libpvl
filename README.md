@@ -53,9 +53,9 @@ Call pvl_commit(struct pvl\*) to make libpvl persist the currently-marked spans.
 
 Leaks in libpvl are changes that were not marked when commit was called. This is an issue when restoring state through libpvl as unmarked changes will not be persisted and therefore not restored.
 
-To detect them provide a leak detection callback to pvl_init() and a mirror memory block of the same size as the main memory block. Upon calling pvl_commit()  libpvl will scan the unmarked areas between the main memory block and the mirror and call the leak detection callback for any found leaks.
+To detect them provide a leak detection callback to pvl_init() and a mirror memory block of the same size as the main memory block. Upon calling pvl_commit()  libpvl will scan the unmarked areas between the main memory block and the mirror and call the leak detection callback for any found leaks. The mirror block is kept up to date with the main block by pvl_commit().
 
-Note that the leak detection will not report leaks that occur in a marked internal span. This is an immediate problem as these leaks will be persisted and restored. See the section on tuning performance on how libpvl works internally.
+Note that the leak detection will not report leaks that occur in a marked internal span. This is not an immediate problem as these leaks will be persisted and restored. See the section on tuning performance on how libpvl works internally.
 
 ### Tuning performance
 
