@@ -992,6 +992,22 @@ void test_pvl_init_initial_load_error_recover_03() {
     free(ctx.dyn_buf);
 }
 
+void test_pvl_init_initial_load_no_file() {
+    printf("\n[test_pvl_init_initial_load_no_file]\n");
+    int marks_count = 8;
+
+    ctx = (test_ctx){0};
+
+    ctx.pre_load[0].return_file = NULL;
+    ctx.pre_load[0].expected_pvl = (struct pvl *) &ctx.pvl_at;
+    ctx.pre_load[0].expected_initial = 1;
+    ctx.pre_load[0].expected_up_to_src = NULL;
+    ctx.pre_load[0].expected_up_to_pos = 0;
+
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, pre_load, NULL, NULL, NULL, NULL);
+    assert(ctx.pvl != NULL);
+}
+
 void test_pvl_save_error_fail_01() {
     printf("\n[test_pvl_save_error_fail_01]\n");
     int marks_count = 8;
@@ -1309,6 +1325,8 @@ int main() {
 
 		test_pvl_init_initial_load_error_fail_03();
 		test_pvl_init_initial_load_error_recover_03();
+
+		test_pvl_init_initial_load_no_file();
 
 		test_pvl_save_error_fail_01();
 		test_pvl_save_error_fail_02();
