@@ -104,3 +104,5 @@ function test() {
 }
 
 test ${TEST_SRC}
+
+echo "All tests passed successfully!"

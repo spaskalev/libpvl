@@ -388,7 +388,7 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
         }
 
         /*
-         * Report success  via the post-load callback
+         * Report success via the post-load callback
          */
         if ((pvl->post_load_cb)(pvl, file, 0, last_good_pos)) {
             goto read_loop;

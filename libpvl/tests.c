@@ -422,6 +422,18 @@ void test_basic_commit() {
     ctx.post_save[0].expected_file = ctx.dyn_file;
     ctx.post_save[0].expected_failed = 0;
 
+    ctx.pre_save[1].return_file = ctx.dyn_file;
+    ctx.pre_save[1].expected_pvl = ctx.pvl;
+    ctx.pre_save[1].expected_full = 0;
+    ctx.pre_save[1].expected_length = written_length;
+
+    ctx.post_save[1].return_int = 0;
+    ctx.post_save[1].expected_pvl = ctx.pvl;
+    ctx.post_save[1].expected_full = 0;
+    ctx.post_save[1].expected_length = written_length;
+    ctx.post_save[1].expected_file = ctx.dyn_file;
+    ctx.post_save[1].expected_failed = 0;
+
     // Write and commit some data
     memset(ctx.buf, 1, 64);
     assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
@@ -429,6 +441,14 @@ void test_basic_commit() {
 
     assert(ctx.pre_save_pos == 1);
     assert(ctx.post_save_pos == 1);
+
+    // Write and commit some more data
+    memset(ctx.buf, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.buf, 64));
+    assert(!pvl_commit(ctx.pvl));
+
+    assert(ctx.pre_save_pos == 2);
+    assert(ctx.post_save_pos == 2);
 
     // Prepare for reading the data
     rewind(ctx.dyn_file);
@@ -441,17 +461,29 @@ void test_basic_commit() {
     ctx.pre_load[0].expected_up_to_src = NULL;
     ctx.pre_load[0].expected_up_to_pos = 0;
 
-    ctx.post_load[0].return_int = 0;
+    ctx.post_load[0].return_int = 1;
     ctx.post_load[0].expected_pvl = ctx.pvl;
     ctx.post_load[0].expected_file = ctx.dyn_file;
     ctx.post_load[0].expected_failed = 0;
     ctx.post_load[0].expected_last_good = written_length;
 
+    ctx.pre_load[1].return_file = ctx.dyn_file;
+    ctx.pre_load[1].expected_pvl = ctx.pvl;
+    ctx.pre_load[1].expected_initial = 0;
+    ctx.pre_load[1].expected_up_to_src = NULL;
+    ctx.pre_load[1].expected_up_to_pos = 0;
+
+    ctx.post_load[1].return_int = 0;
+    ctx.post_load[1].expected_pvl = ctx.pvl;
+    ctx.post_load[1].expected_file = ctx.dyn_file;
+    ctx.post_load[1].expected_failed = 0;
+    ctx.post_load[1].expected_last_good = written_length*2;
+
     // Create a new pvl to load the data
     ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, NULL, pre_load, post_load, NULL, NULL, NULL);
 
-    assert(ctx.pre_load_pos == 1);
-    assert(ctx.post_load_pos == 1);
+    assert(ctx.pre_load_pos == 2);
+    assert(ctx.post_load_pos == 2);
 
     // Verify it
     for (size_t i = 0; i < CTX_BUFFER_SIZE; i++) {
@@ -1276,67 +1308,67 @@ void test_leak_no_leak() {
 }
 
 int main() {
-	{
-		test_init_misalignment();
-		test_init_alignment();
-		test_init_zero_marks();
-		test_init_null_main();
-		test_init_non_null_main();
-		test_init_zero_length();
-		test_init_non_zero_length();
-		test_init_non_divisible_spans();
-		test_init_main_mirror_overlap();
-		test_init_main_mirror_no_overlap();
-		test_init_mirror_main_overlap();
-		test_init_mirror_main_no_overlap();
-		test_init_leak_no_mirror();
+    {
+        test_init_misalignment();
+        test_init_alignment();
+        test_init_zero_marks();
+        test_init_null_main();
+        test_init_non_null_main();
+        test_init_zero_length();
+        test_init_non_zero_length();
+        test_init_non_divisible_spans();
+        test_init_main_mirror_overlap();
+        test_init_main_mirror_no_overlap();
+        test_init_mirror_main_overlap();
+        test_init_mirror_main_no_overlap();
+        test_init_leak_no_mirror();
 
-		test_mark_pvl_null();
-		test_mark_mark_null();
-		test_mark_zero_length();
-		test_mark_before_main();
-		test_mark_mark_main_overlap();
-		test_mark_main_mark_overlap();
-		test_mark_after_main();
-		test_mark_start_of_main();
-		test_mark_middle_of_main();
-		test_mark_end_of_main();
-		test_mark_all_of_main();
-		test_mark_extra_marks();
+        test_mark_pvl_null();
+        test_mark_mark_null();
+        test_mark_zero_length();
+        test_mark_before_main();
+        test_mark_mark_main_overlap();
+        test_mark_main_mark_overlap();
+        test_mark_after_main();
+        test_mark_start_of_main();
+        test_mark_middle_of_main();
+        test_mark_end_of_main();
+        test_mark_all_of_main();
+        test_mark_extra_marks();
 
-		test_commit_pvl_null();
-		test_commit_no_mark();
-		test_commit_single_mark();
-		test_commit_max_marks();
-		test_commit_over_max_marks();
-	}
+        test_commit_pvl_null();
+        test_commit_no_mark();
+        test_commit_single_mark();
+        test_commit_max_marks();
+        test_commit_over_max_marks();
+    }
 
-	{
-		test_basic_commit();
-		test_basic_commit_mirror();
-	}
+    {
+        test_basic_commit();
+        test_basic_commit_mirror();
+    }
 
-	{
-		test_pvl_init_initial_load_error_fail_01();
-		test_pvl_init_initial_load_error_recover_01();
+    {
+        test_pvl_init_initial_load_error_fail_01();
+        test_pvl_init_initial_load_error_recover_01();
 
-		test_pvl_init_initial_load_error_fail_02();
-		test_pvl_init_initial_load_error_recover_02();
+        test_pvl_init_initial_load_error_fail_02();
+        test_pvl_init_initial_load_error_recover_02();
 
-		test_pvl_init_initial_load_error_fail_03();
-		test_pvl_init_initial_load_error_recover_03();
+        test_pvl_init_initial_load_error_fail_03();
+        test_pvl_init_initial_load_error_recover_03();
 
-		test_pvl_init_initial_load_no_file();
+        test_pvl_init_initial_load_no_file();
 
-		test_pvl_save_error_fail_01();
-		test_pvl_save_error_fail_02();
-		test_pvl_save_error_fail_03();
-		test_pvl_save_error_fail_flush();
+        test_pvl_save_error_fail_01();
+        test_pvl_save_error_fail_02();
+        test_pvl_save_error_fail_03();
+        test_pvl_save_error_fail_flush();
 
-		test_pvl_save_no_destination();
+        test_pvl_save_no_destination();
 
-		test_leak_no_mirror();
-		test_leak_detected();
-		test_leak_no_leak();
-	}
+        test_leak_no_mirror();
+        test_leak_detected();
+        test_leak_no_leak();
+    }
 }
