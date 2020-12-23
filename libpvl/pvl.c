@@ -42,7 +42,8 @@ struct pvl {
     long               last_save_pos;
     _Bool              dirty;
     /*
-     * The field order bellow is used by pvl_save()
+     * The field order bellow is used by
+     * pvl_sizeof_change_header() and pvl_change_header()
      */
     size_t             span_length;
     size_t             span_count;
@@ -134,7 +135,9 @@ struct pvl *pvl_init(char *at, size_t span_count, char *main, size_t length, cha
     pvl->mirror = mirror;
     pvl->span_length = pvl->length / pvl->span_count;
 
-    // Callbacks are checked at call sites
+    /*
+     * Callbacks are checked at call sites
+     */
     pvl->pre_load_cb = pre_load_cb;
     pvl->post_load_cb = post_load_cb;
 
@@ -143,7 +146,9 @@ struct pvl *pvl_init(char *at, size_t span_count, char *main, size_t length, cha
 
     pvl->leak_cb = leak_cb;
 
-    // Perform initial load
+    /*
+     * Perform initial load
+     */
     if (pvl_load(pvl, 1, NULL, 0) != 0) {
         return NULL;
     }
@@ -340,12 +345,16 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
         file = (pvl->pre_load_cb)(pvl, initial, up_to_src, up_to_pos);
 
         if (initial) {
-            // Only the first read in a sequence should be indicated as initial
+            /*
+             * Only the first read in a sequence is an initial read
+             */
             initial = 0;
         }
 
         if (!file) {
-            // Nothing to load
+            /*
+             * No file to read from
+             */
             return 0;
         }
 
@@ -355,7 +364,9 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
         last_good_pos = ftell(file);
         size_t header_size = pvl_sizeof_change_header(pvl);
         if (fread(pvl_change_header(pvl), header_size, 1, file) != 1) {
-            // Couldn't load the change, signal the callback
+            /*
+             * Couldn't load the change, signal the callback
+             */
             if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
                 reset_load = 1;
                 goto read_loop;
@@ -369,7 +380,9 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
         for (size_t i = 0; i < pvl->span_count; i++) {
             if (BITSET_TEST(pvl->spans, i)) {
                 if (fread(pvl->main + (i*pvl->span_length), pvl->span_length, 1, file) != 1) {
-                    // Couldn't load the change, signal the callback
+                    /*
+                     * Couldn't load the change, signal the callback
+                     */
                     if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
                         reset_load = 1;
                         goto read_loop;
@@ -416,19 +429,25 @@ static void pvl_detect_leaks_inner(struct pvl *pvl, size_t from, size_t to) {
     size_t diff_start = 0;
     for (size_t i = from; i <= to; i++) {
         if (in_diff) {
-            if (pvl->main[i] == pvl->mirror[i]) { //diff over
-                // report diff
+            if (pvl->main[i] == pvl->mirror[i]) {
+                /*
+                 * Report diff
+                 */
                 (pvl->leak_cb)(pvl, (pvl->main)+diff_start, i-diff_start);
-                // clear trackers
+                /*
+                 * Clear trackers
+                 */
                 in_diff = 0;
                 diff_start = 0;
-            } // else do nothing
+            }
         } else {
-            if (pvl->main[i] != pvl->mirror[i]) { //diff starts
-                // set trackers
+            if (pvl->main[i] != pvl->mirror[i]) {
+                /*
+                 * Set trackers
+                 */
                 in_diff = 1;
                 diff_start = i;
-            } // else do nothing
+            }
         }
     }
 }

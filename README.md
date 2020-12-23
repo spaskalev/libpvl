@@ -39,9 +39,9 @@ libpvl's main object type is struct pvl\*, an incomplete type that is initialize
 
 ### Making changes
 
-Call pvl_mark(struct pvl\*, char*, size_t) to inform libpvl of a span of memory that has been changed.
+Call pvl_mark(struct pvl\*, char*, size_t) to indicate that a span of memory that has been changed. This operation is cheap to call O(1) and idempotent in the context of a commit.
 
-The span location has to fall in the memory span that the struct pvl\* instance has been configured to manage upon calling pvl_init.
+The span location has to fall in the memory block that the struct pvl\* instance has been configured to manage upon calling pvl_init.
 
 ### Confirming changes
 
@@ -50,5 +50,9 @@ Call pvl_commit(struct pvl\*) to make libpvl persist the currently-marked spans.
 ## Troubleshooting
 
 ### Detecting leaks
+
+Leaks in libpvl are changes that were not marked when commit was called. This is an issue when restoring state through libpvl as unmarked changes will not be persisted and therefore not restored.
+
+To detect them provide a leak detection callback to pvl_init() and a mirror memory block of the same size as the main memory block. Upon calling pvl_commit()  libpvl will scan the unmarked areas between the main memory block and the mirror and call the leak detection callback for any found leaks.
 
 ### Tuning performance

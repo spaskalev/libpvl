@@ -37,7 +37,7 @@ struct pvl;
  *
  * span_count must match with pvl_init
  */
-size_t pvl_sizeof(size_t span_size);
+size_t pvl_sizeof(size_t span_count);
 
 /*
  * Callback for preparing to load a change
