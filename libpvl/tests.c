@@ -1210,7 +1210,7 @@ void test_leak_detected() {
 
     // Write and commit some data
     memset(ctx.buf, 1, 64);
-    assert(!pvl_mark(ctx.pvl, ctx.buf, 32));
+    assert(!pvl_mark(ctx.pvl, ctx.buf, 31));
     assert(!pvl_commit(ctx.pvl));
     assert(ctx.leak_pos == 1);
 
@@ -1220,12 +1220,13 @@ void test_leak_detected() {
 
 void test_leak_no_leak() {
     printf("\n[test_leak_no_leak]\n");
-    int written_length = 32;
-    int marks_count = 8;
+    int marks_count = CTX_BUFFER_SIZE/32;
 
     ctx = (test_ctx){0};
     ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, leak);
     assert(ctx.pvl);
+
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
 
     ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
 
@@ -1242,8 +1243,8 @@ void test_leak_no_leak() {
     ctx.post_save[0].expected_failed = 0;
 
     // Write and commit some data
-    memset(ctx.buf, 1, 32);
-    assert(!pvl_mark(ctx.pvl, ctx.buf, 32));
+    memset(ctx.buf, 1, 31);
+    assert(!pvl_mark(ctx.pvl, ctx.buf, 31));
     assert(!pvl_commit(ctx.pvl));
     assert(ctx.leak_pos == 0);
 
