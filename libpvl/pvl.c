@@ -295,11 +295,13 @@ static int pvl_save(struct pvl *pvl) {
 
     /*
      * Apply to mirror
-     *
-     * TODO: optimize, dumb version for now
      */
     if (pvl->mirror) {
-		memcpy(pvl->mirror, pvl->main, pvl->length);
+        for (size_t i = 0; i < pvl->span_count; i++) {
+            if (BITSET_TEST(pvl->spans, i)) {
+                memcpy(pvl->mirror + (i*pvl->span_length), pvl->main + (i*pvl->span_length), pvl->span_length);
+            }
+        }
     }
 
     /*
