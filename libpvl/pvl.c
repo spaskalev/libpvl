@@ -382,21 +382,22 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
         last_good_pos = ftell(file);
 
         /*
-         * Apply it to the mirror.
-         * TODO - optimize this only for changed spans
-         */
-        if (pvl->mirror) {
-            memcpy(pvl->mirror, pvl->main, pvl->length);
-        }
-
-        /*
          * Report success via the post-load callback
          */
         if ((pvl->post_load_cb)(pvl, file, 0, last_good_pos)) {
             goto read_loop;
         }
-        return 0;
+        break;
     }
+
+    /*
+     * Apply to mirror
+     */
+    if (pvl->mirror) {
+        memcpy(pvl->mirror, pvl->main, pvl->length);
+    }
+
+    return 0;
 }
 
 static void pvl_detect_leaks(struct pvl *pvl) {
