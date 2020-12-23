@@ -17,7 +17,7 @@ libpvl is designed to abstract domain code from IO handling. Domain code has acc
 
 ## Ease of use
 
-libpvl is designed to be developer-friendly through a small and well-defined API, a defensive programming style and a comprehensive test suite. It includes troubleshooting facilities to help developers find bugs and tune their applications.
+libpvl is designed to be developer-friendly through a small and well-defined API, a defensive programming style and a comprehensive test suite (complete branch and line coverage). It includes troubleshooting facilities to help developers find bugs and tune their applications.
 
 # Usage
 
@@ -63,4 +63,14 @@ To achieve constant time and space complexity for pvl_mark() libpvl splits the m
 
 # Comparison with other prevalence libraries
 
-High-level prevalence libraries like [Prevayler](https://github.com/prevayler/prevayler) for Java and [Madeleine](https://github.com/ghostganz/madeleine) for Ruby wrap changes to the persistent state through serialized command objects. Care is needed to avoid side effects and environment-dependent behavior like "get current timestamp" in commands. Libpvl operates on already-changed raw data and is not affected by this sort of issues. It is also faster by the virtue of doing less - it does not have to serialize/deserialize commands and apply them but just read and write data. However libpvl has a similar caveat with pointers - if pointers are stored by it they will later be restored as-is and might no longer be valid. It is best to avoid pointers in pvl-managed memory. Relative array offsets can be used instead for the same purpose within the managed memory.
+High-level prevalence libraries like [Prevayler](https://github.com/prevayler/prevayler) for Java and [Madeleine](https://github.com/ghostganz/madeleine) for Ruby wrap changes to the persistent state through serialized command objects. Care is needed to avoid side effects and environment-dependent behavior like "get current timestamp" in commands. Libpvl operates on already-changed raw data and is not affected by this sort of issues. It is also faster by the virtue of doing less - it does not have to serialize/deserialize commands and apply them but just read and write data.
+
+# Caveats
+
+## Pointer care
+
+If pointers are stored by libpvl they will later be restored as-is and might no longer be valid. It is best to avoid pointers in pvl-managed memory. Relative array offsets can be used instead for the same purpose within the managed memory.
+
+## Interoperability
+
+The format that libpvl uses to persist changes is implementation-defined and not part of its contract. Always save and restore using the same libpvl version compiled for the same architecture using the same compiler and settings for maximum compatibility. If you application needs to upgraded and keep its data it might be best to export it in a regular format from the old version and import it back to libpvl-managed memory in the new version.
