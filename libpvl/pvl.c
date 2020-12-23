@@ -53,9 +53,12 @@ size_t pvl_sizeof(size_t span_count) {
     return sizeof(struct pvl)+(BITSET_SIZE(span_count) * sizeof(char));
 }
 
+static size_t pvl_sizeof_change_header(struct pvl *pvl);
+static void *pvl_change_header(struct pvl *pvl);
 static int pvl_load(struct pvl *pvl, int initial, FILE *req_from, long req_pos);
 static int pvl_save(struct pvl *pvl);
 static void pvl_clear_memory(struct pvl *pvl);
+static void pvl_clear_spans(struct pvl *pvl);
 static void pvl_detect_leaks(struct pvl *pvl);
 static void pvl_detect_leaks_inner(struct pvl *pvl, size_t from, size_t to);
 
@@ -197,6 +200,20 @@ static void pvl_clear_memory(struct pvl *pvl) {
     }
 }
 
+static void pvl_clear_spans(struct pvl *pvl) {
+    memset(pvl->spans, 0, (BITSET_SIZE(pvl->span_count) * sizeof(char)));
+}
+
+static size_t pvl_sizeof_change_header(struct pvl *pvl) {
+    ptrdiff_t base_size = (pvl->spans) - (char*)(&pvl->span_length);
+    size_t header_size = base_size + (BITSET_SIZE(pvl->span_count) * sizeof(char));
+    return header_size;
+}
+
+static void *pvl_change_header(struct pvl *pvl) {
+    return &pvl->span_length;
+}
+
 /*
  * Save the currently-marked memory content
  */
@@ -218,14 +235,13 @@ static int pvl_save(struct pvl *pvl) {
     /*
      * Calculate the total size of the change
      */
-    ptrdiff_t base_size = (pvl->spans) - (char*)(&pvl->span_length);
-    size_t header_size = base_size + (BITSET_SIZE(pvl->span_count) * sizeof(char));
     size_t content_size = 0;
     for (size_t i = 0; i < pvl->span_count; i++) {
         if (BITSET_TEST(pvl->spans, i)) {
             content_size += pvl->span_length;
         }
     }
+    size_t header_size = pvl_sizeof_change_header(pvl);
     size_t total = header_size + content_size;
 
     /*
@@ -250,7 +266,7 @@ static int pvl_save(struct pvl *pvl) {
     /*
      * Construct and save the header
      */
-    if (fwrite(&pvl->span_length, header_size, 1, file) != 1) {
+    if (fwrite(pvl_change_header(pvl), header_size, 1, file) != 1) {
         (pvl->post_save_cb)(pvl, full, total, file, 1);
         return 1;
     }
@@ -291,10 +307,7 @@ static int pvl_save(struct pvl *pvl) {
      */
     (pvl->post_save_cb)(pvl, full, total, file, 0);
 
-    /*
-     * TODO zero out span info
-     */
-
+    pvl_clear_spans(pvl);
     pvl->dirty = 0;
     return 0;
 }
@@ -338,10 +351,8 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
          * Try to load a change from it
          */
         last_good_pos = ftell(file);
-        ptrdiff_t base_size = (pvl->spans) - (char*)(&pvl->span_length);
-        size_t header_size = base_size + (BITSET_SIZE(pvl->span_count) * sizeof(char));
-
-        if (fread(&pvl->span_length, header_size, 1, file) != 1) {
+        size_t header_size = pvl_sizeof_change_header(pvl);
+        if (fread(pvl_change_header(pvl), header_size, 1, file) != 1) {
             // Couldn't load the change, signal the callback
             if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
                 reset_load = 1;
@@ -365,10 +376,7 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
                 }
             }
         }
-        /*
-         * TODO zero out span info
-         */
-
+        pvl_clear_spans(pvl);
         last_good_pos = ftell(file);
 
         /*

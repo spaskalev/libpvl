@@ -13,7 +13,7 @@ libpvl is licensed under the 0BSD license. See the LICENSE.md file for details.
 
 ### Abstract IO
 
-libpvl is designed to abstract domain code from IO handling. Domain code has access to a few functions (pvl_mark, pvl_commit, pvl_rollback) that in turn call callbacks to handle the IO. This makes it easy to use different IO handlers without performing any changes on the domain code. The IO handlers can be anything from no-op or in-memory ones for testing, through regular file-based I/O or even over-the-network replication for high availability. Once the libpvl core is complete development will shift towards a set of IO handlers.
+libpvl is designed to abstract domain code from IO handling. Domain code has access to a few functions (pvl_mark, pvl_commit) that in turn call callbacks to handle the IO. This makes it easy to use different IO handlers without performing any changes on the domain code. The IO handlers can be anything from no-op or in-memory ones for testing, through regular file-based I/O or even over-the-network replication for high availability. Once the libpvl core is complete development will shift towards a set of IO handlers.
 
 ### Ease of use
 

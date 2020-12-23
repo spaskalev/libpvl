@@ -97,7 +97,7 @@ void test_init_leak_no_mirror() {
         test_init_leak_no_mirror_leak_cb);
     assert(pvl == NULL);
     // call empty cb, ensure line coverage
-    test_init_leak_no_mirror_leak_cb(NULL, NULL, 0, 0);
+    test_init_leak_no_mirror_leak_cb(NULL, NULL, 0);
 }
 
 void test_mark_pvl_null() {
@@ -171,7 +171,7 @@ void test_mark_end_of_main() {
 }
 
 void test_mark_all_of_main() {
-    int marks = 10;
+    int marks = 8;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(marks)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, marks, buffer, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -210,7 +210,7 @@ void test_commit_single_mark() {
 }
 
 void test_commit_max_marks() {
-    size_t marks = 10;
+    size_t marks = 8;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(marks)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, marks, buffer, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -221,7 +221,7 @@ void test_commit_max_marks() {
 }
 
 void test_commit_over_max_marks() {
-    size_t marks = 10;
+    size_t marks = 8;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(marks)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -280,11 +280,13 @@ typedef struct {
     size_t     expected_length;
 } leak_ctx;
 
+#define CTX_BUFFER_SIZE 1024
+
 typedef struct {
     struct pvl *pvl;
-    alignas(max_align_t) char pvl_at[1024];
-    alignas(max_align_t) char buf[1024];
-    alignas(max_align_t) char mirror[1024];
+    alignas(max_align_t) char pvl_at[CTX_BUFFER_SIZE];
+    alignas(max_align_t) char buf[CTX_BUFFER_SIZE];
+    alignas(max_align_t) char mirror[CTX_BUFFER_SIZE];
 
     char   *dyn_buf;
     size_t dyn_len;
@@ -390,13 +392,14 @@ void leak(struct pvl *pvl, void *start, size_t length) {
 
 void test_basic_commit() {
     printf("\n[test_basic_commit]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
-    int marks_count = 10;
+    size_t marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, NULL, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
+
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
 
     ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
 
@@ -422,8 +425,8 @@ void test_basic_commit() {
 
     // Prepare for reading the data
     rewind(ctx.dyn_file);
-    memset(ctx.pvl_at, 0, 1024);
-    memset(ctx.buf, 0, 1024);
+    memset(ctx.pvl_at, 0, pvl_sizeof(marks_count));
+    memset(ctx.buf, 0, CTX_BUFFER_SIZE);
 
     ctx.pre_load[0].return_file = ctx.dyn_file;
     ctx.pre_load[0].expected_pvl = ctx.pvl;
@@ -438,13 +441,13 @@ void test_basic_commit() {
     ctx.post_load[0].expected_last_good = written_length;
 
     // Create a new pvl to load the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, pre_load, post_load, NULL, NULL, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, NULL, pre_load, post_load, NULL, NULL, NULL);
 
     assert(ctx.pre_load_pos == 1);
     assert(ctx.post_load_pos == 1);
 
     // Verify it
-    for (size_t i = 0; i < 1024; i++) {
+    for (size_t i = 0; i < CTX_BUFFER_SIZE; i++) {
         if (i < 64) {
             assert(ctx.buf[i] == 1);
         } else {
@@ -458,13 +461,14 @@ void test_basic_commit() {
 
 void test_basic_commit_mirror() {
     printf("\n[test_basic_commit_mirror]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
-    int marks_count = 10;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
+
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
 
     ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
 
@@ -490,9 +494,9 @@ void test_basic_commit_mirror() {
 
     // Prepare for reading the data
     rewind(ctx.dyn_file);
-    memset(ctx.pvl_at, 0, 1024);
-    memset(ctx.buf, 0, 1024);
-    memset(ctx.mirror, 0, 1024);
+    memset(ctx.pvl_at, 0, pvl_sizeof(marks_count));
+    memset(ctx.buf, 0, CTX_BUFFER_SIZE);
+    memset(ctx.mirror, 0, CTX_BUFFER_SIZE);
 
     ctx.pre_load[0].return_file = ctx.dyn_file;
     ctx.pre_load[0].expected_pvl = ctx.pvl;
@@ -507,13 +511,13 @@ void test_basic_commit_mirror() {
     ctx.post_load[0].expected_last_good = written_length;
 
     // Create a new pvl to load the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
 
     assert(ctx.pre_load_pos == 1);
     assert(ctx.post_load_pos == 1);
 
     // Verify it
-    for (size_t i = 0; i < 1024; i++) {
+    for (size_t i = 0; i < CTX_BUFFER_SIZE; i++) {
         if (i < 64) {
             assert(ctx.buf[i] == 1);
         } else {
@@ -527,13 +531,14 @@ void test_basic_commit_mirror() {
 
 void test_pvl_init_initial_load_error_fail_01() {
     printf("\n[test_pvl_init_initial_load_error_fail_01]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
-    int marks_count = 10;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
+
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
 
     ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
 
@@ -559,9 +564,9 @@ void test_pvl_init_initial_load_error_fail_01() {
 
     // Prepare for reading the data
     rewind(ctx.dyn_file);
-    memset(ctx.pvl_at, 0, 1024);
-    memset(ctx.buf, 0, 1024);
-    memset(ctx.mirror, 0, 1024);
+    memset(ctx.pvl_at, 0, pvl_sizeof(marks_count));
+    memset(ctx.buf, 0, CTX_BUFFER_SIZE);
+    memset(ctx.mirror, 0, CTX_BUFFER_SIZE);
 
     // Read from a capped buffer
     FILE *load_src = fmemopen(ctx.dyn_buf,1,"r");
@@ -581,7 +586,7 @@ void test_pvl_init_initial_load_error_fail_01() {
     ctx.post_load[0].expected_last_good = 0;
 
     // Create a new pvl to load the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
     assert(ctx.pvl == NULL);
 
     assert(!fclose(ctx.dyn_file));
@@ -590,13 +595,14 @@ void test_pvl_init_initial_load_error_fail_01() {
 
 void test_pvl_init_initial_load_error_recover_01() {
     printf("\n[test_pvl_init_initial_load_error_recover_01]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
-    int marks_count = 10;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
+
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
 
     ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
 
@@ -622,9 +628,9 @@ void test_pvl_init_initial_load_error_recover_01() {
 
     // Prepare for reading the data
     rewind(ctx.dyn_file);
-    memset(ctx.pvl_at, 0, 1024);
-    memset(ctx.buf, 0, 1024);
-    memset(ctx.mirror, 0, 1024);
+    memset(ctx.pvl_at, 0, pvl_sizeof(marks_count));
+    memset(ctx.buf, 0, CTX_BUFFER_SIZE);
+    memset(ctx.mirror, 0, CTX_BUFFER_SIZE);
 
     // Read from a capped buffer
     FILE *load_src = fmemopen(ctx.dyn_buf,1,"r");
@@ -656,14 +662,14 @@ void test_pvl_init_initial_load_error_recover_01() {
     ctx.post_load[1].expected_last_good = written_length;
 
     // Create a new pvl to load the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
     assert(ctx.pvl);
 
     assert(ctx.pre_load_pos == 2);
     assert(ctx.post_load_pos == 2);
 
     // Verify it
-    for (size_t i = 0; i < 1024; i++) {
+    for (size_t i = 0; i < CTX_BUFFER_SIZE; i++) {
         if (i < 64) {
             assert(ctx.buf[i] == 1);
         } else {
@@ -677,13 +683,14 @@ void test_pvl_init_initial_load_error_recover_01() {
 
 void test_pvl_init_initial_load_error_fail_02() {
     printf("\n[test_pvl_init_initial_load_error_fail_02]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
-    int marks_count = 10;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
+
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
 
     ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
 
@@ -709,13 +716,12 @@ void test_pvl_init_initial_load_error_fail_02() {
 
     // Prepare for reading the data
     rewind(ctx.dyn_file);
-    memset(ctx.pvl_at, 0, 1024);
-    memset(ctx.buf, 0, 1024);
-    memset(ctx.mirror, 0, 1024);
+    memset(ctx.pvl_at, 0, pvl_sizeof(marks_count));
+    memset(ctx.buf, 0, CTX_BUFFER_SIZE);
+    memset(ctx.mirror, 0, CTX_BUFFER_SIZE);
 
     // Read from a capped buffer
-    // FILE *load_src = fmemopen(ctx.dyn_buf,sizeof(change_header)+sizeof(mark_header)+32,"r");
-    FILE *load_src = fmemopen(ctx.dyn_buf,sizeof(change_header),"r");
+    FILE *load_src = fmemopen(ctx.dyn_buf,8,"r");
     printf("%d\n", errno);
     assert(load_src);
 
@@ -732,7 +738,7 @@ void test_pvl_init_initial_load_error_fail_02() {
     ctx.post_load[0].expected_last_good = 0;
 
     // Create a new pvl to load the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
     assert(ctx.pvl == NULL);
 
     assert(!fclose(ctx.dyn_file));
@@ -741,13 +747,14 @@ void test_pvl_init_initial_load_error_fail_02() {
 
 void test_pvl_init_initial_load_error_recover_02() {
     printf("\n[test_pvl_init_initial_load_error_recover_02]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
-    int marks_count = 10;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
+
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
 
     ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
 
@@ -773,12 +780,12 @@ void test_pvl_init_initial_load_error_recover_02() {
 
     // Prepare for reading the data
     rewind(ctx.dyn_file);
-    memset(ctx.pvl_at, 0, 1024);
-    memset(ctx.buf, 0, 1024);
-    memset(ctx.mirror, 0, 1024);
+    memset(ctx.pvl_at, 0, pvl_sizeof(marks_count));
+    memset(ctx.buf, 0, CTX_BUFFER_SIZE);
+    memset(ctx.mirror, 0, CTX_BUFFER_SIZE);
 
     // Read from a capped buffer
-    FILE *load_src = fmemopen(ctx.dyn_buf,sizeof(change_header),"r");
+    FILE *load_src = fmemopen(ctx.dyn_buf,12,"r");
     printf("%d\n", errno);
     assert(load_src);
 
@@ -807,14 +814,14 @@ void test_pvl_init_initial_load_error_recover_02() {
     ctx.post_load[1].expected_last_good = written_length;
 
     // Create a new pvl to load the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
     assert(ctx.pvl);
 
     assert(ctx.pre_load_pos == 2);
     assert(ctx.post_load_pos == 2);
 
     // Verify it
-    for (size_t i = 0; i < 1024; i++) {
+    for (size_t i = 0; i < CTX_BUFFER_SIZE; i++) {
         if (i < 64) {
             assert(ctx.buf[i] == 1);
         } else {
@@ -828,13 +835,14 @@ void test_pvl_init_initial_load_error_recover_02() {
 
 void test_pvl_init_initial_load_error_fail_03() {
     printf("\n[test_pvl_init_initial_load_error_fail_03]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
-    int marks_count = 10;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
+
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
 
     ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
 
@@ -860,12 +868,12 @@ void test_pvl_init_initial_load_error_fail_03() {
 
     // Prepare for reading the data
     rewind(ctx.dyn_file);
-    memset(ctx.pvl_at, 0, 1024);
-    memset(ctx.buf, 0, 1024);
-    memset(ctx.mirror, 0, 1024);
+    memset(ctx.pvl_at, 0, pvl_sizeof(marks_count));
+    memset(ctx.buf, 0, CTX_BUFFER_SIZE);
+    memset(ctx.mirror, 0, CTX_BUFFER_SIZE);
 
     // Read from a capped buffer
-    FILE *load_src = fmemopen(ctx.dyn_buf,sizeof(change_header)+sizeof(mark_header),"r");
+    FILE *load_src = fmemopen(ctx.dyn_buf,64,"r");
     printf("%d\n", errno);
     assert(load_src);
 
@@ -882,7 +890,7 @@ void test_pvl_init_initial_load_error_fail_03() {
     ctx.post_load[0].expected_last_good = 0;
 
     // Create a new pvl to load the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
     assert(ctx.pvl == NULL);
 
     assert(!fclose(ctx.dyn_file));
@@ -891,13 +899,14 @@ void test_pvl_init_initial_load_error_fail_03() {
 
 void test_pvl_init_initial_load_error_recover_03() {
     printf("\n[test_pvl_init_initial_load_error_recover_03]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
-    int marks_count = 10;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
+
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
 
     ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
 
@@ -923,12 +932,12 @@ void test_pvl_init_initial_load_error_recover_03() {
 
     // Prepare for reading the data
     rewind(ctx.dyn_file);
-    memset(ctx.pvl_at, 0, 1024);
-    memset(ctx.buf, 0, 1024);
-    memset(ctx.mirror, 0, 1024);
+    memset(ctx.pvl_at, 0, pvl_sizeof(marks_count));
+    memset(ctx.buf, 0, CTX_BUFFER_SIZE);
+    memset(ctx.mirror, 0, CTX_BUFFER_SIZE);
 
     // Read from a capped buffer
-    FILE *load_src = fmemopen(ctx.dyn_buf,sizeof(change_header)+sizeof(mark_header),"r");
+    FILE *load_src = fmemopen(ctx.dyn_buf,12,"r");
     printf("%d\n", errno);
     assert(load_src);
 
@@ -957,14 +966,14 @@ void test_pvl_init_initial_load_error_recover_03() {
     ctx.post_load[1].expected_last_good = written_length;
 
     // Create a new pvl to load the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, pre_load, post_load, NULL, NULL, NULL);
     assert(ctx.pvl);
 
     assert(ctx.pre_load_pos == 2);
     assert(ctx.post_load_pos == 2);
 
     // Verify it
-    for (size_t i = 0; i < 1024; i++) {
+    for (size_t i = 0; i < CTX_BUFFER_SIZE; i++) {
         if (i < 64) {
             assert(ctx.buf[i] == 1);
         } else {
@@ -978,13 +987,14 @@ void test_pvl_init_initial_load_error_recover_03() {
 
 void test_pvl_save_error_fail_01() {
     printf("\n[test_pvl_save_error_fail_01]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
-    int marks_count = 10;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
+
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
 
     char buffer[1024];
     FILE *save_dest = fmemopen(buffer,1,"w+");
@@ -1015,16 +1025,17 @@ void test_pvl_save_error_fail_01() {
 
 void test_pvl_save_error_fail_02() {
     printf("\n[test_pvl_save_error_fail_02]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
-    int marks_count = 10;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
 
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
+
     char buffer[1024];
-    FILE *save_dest = fmemopen(buffer,sizeof(change_header),"w+");
+    FILE *save_dest = fmemopen(buffer,12,"w+");
     setbuf(save_dest, NULL);
 
     ctx.pre_save[0].return_file = save_dest;
@@ -1052,16 +1063,17 @@ void test_pvl_save_error_fail_02() {
 
 void test_pvl_save_error_fail_03() {
     printf("\n[test_pvl_save_error_fail_03]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
-    int marks_count = 10;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
 
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
+
     char buffer[1024];
-    FILE *save_dest = fmemopen(buffer,sizeof(change_header)+sizeof(mark_header),"w+");
+    FILE *save_dest = fmemopen(buffer,12,"w+");
     setbuf(save_dest, NULL);
 
     ctx.pre_save[0].return_file = save_dest;
@@ -1089,16 +1101,17 @@ void test_pvl_save_error_fail_03() {
 
 void test_pvl_save_error_fail_flush() {
     printf("\n[test_pvl_save_error_fail_flush]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
-    int marks_count = 10;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
 
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
+
     char buffer[1024];
-    FILE *save_dest = fmemopen(buffer,sizeof(change_header)+sizeof(mark_header),"w+");
+    FILE *save_dest = fmemopen(buffer,12,"w+");
     // Leave unbufferred so that it fails at fflush
     //setbuf(save_dest, NULL);
 
@@ -1127,13 +1140,14 @@ void test_pvl_save_error_fail_flush() {
 
 void test_pvl_save_no_destination() {
     printf("\n[test_pvl_save_no_destination]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 64;
-    int marks_count = 10;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, NULL, NULL, pre_save, post_save, NULL);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, NULL, NULL, NULL, pre_save, post_save, NULL);
     assert(ctx.pvl != NULL);
+
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
 
     ctx.pre_save[0].return_file = NULL;
     ctx.pre_save[0].expected_pvl = ctx.pvl;
@@ -1158,22 +1172,23 @@ void test_pvl_save_no_destination() {
 
 void test_leak_no_mirror() {
     printf("\n[test_leak_no_mirror]\n");
-    int marks_count = 10;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, NULL, NULL, NULL, NULL, NULL, leak);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, NULL, NULL, NULL, NULL, NULL, leak);
     assert(ctx.pvl == NULL);
 }
 
 void test_leak_detected() {
-    printf("\n[test_leak]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 32;
-    int marks_count = 10;
+    printf("\n[test_leak_detected]\n");
+    int marks_count = CTX_BUFFER_SIZE/32;
 
     ctx = (test_ctx){0};
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, leak);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, leak);
     assert(ctx.pvl);
+
+    int written_length = pvl_sizeof_change_header(ctx.pvl) + (CTX_BUFFER_SIZE/marks_count);
 
     ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
 
@@ -1204,12 +1219,12 @@ void test_leak_detected() {
 }
 
 void test_leak_no_leak() {
-    printf("\n[test_leak]\n");
-    int written_length = sizeof(change_header) + sizeof(mark_header) + 32;
-    int marks_count = 10;
+    printf("\n[test_leak_no_leak]\n");
+    int written_length = 32;
+    int marks_count = 8;
 
     ctx = (test_ctx){0};
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, 1024, ctx.mirror, NULL, NULL, pre_save, post_save, leak);
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.buf, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, pre_save, post_save, leak);
     assert(ctx.pvl);
 
     ctx.dyn_file = open_memstream(&ctx.dyn_buf, &ctx.dyn_len);
