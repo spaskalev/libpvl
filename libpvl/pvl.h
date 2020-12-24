@@ -39,7 +39,41 @@ struct pvl;
  */
 size_t pvl_sizeof(size_t span_count);
 
+/*
+ * Callback for persisting changes
+ *
+ * Passed parameters
+ * - Caller-provided context
+ * - Address to read change content from
+ * - Length of change content to be stored
+ * - Number of remaining bytes till the entire change is passed to the callback.
+ *    It will be set to zero when writing the last chunk.
+ *    This can be used by callback handlers to wrap entire changes with additional
+ *    features, e.g. checksum, compression, encryption, signing, etc.
+ *
+ * Returns
+ * - Nothing
+ */
 typedef int write_callback(void *ctx, void *from, size_t length, size_t remaining);
+
+/*
+ * Callback for retrieving changes
+ *
+ * Passed parameters
+ * - Caller-provided context
+ * - Address to write change content to
+ * - Length of change content to be read
+ *    This can be set to zero - in this case libpvl is querying the
+ *    remaining bytes availability
+ * - Number of remaining bytes to be read as part of the same change.
+ *    Callbacks can use this hint to verify additional features as documented
+ *    in the write callback documentation.
+ *    The read callback should not return an error during continuous change
+ *    read with decreasing remaning bytes.
+ *
+ * Returns
+ * - Nothing
+ */
 typedef int read_callback(void *ctx, void *to, size_t length, size_t remaining);
 
 /*
