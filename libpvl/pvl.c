@@ -33,13 +33,16 @@ struct pvl {
     char               *main;
     char               *mirror;
     size_t             length;
-    pre_load_callback  *pre_load_cb;
-    post_load_callback *post_load_cb;
-    pre_save_callback  *pre_save_cb;
-    post_save_callback *post_save_cb;
+    /* read context and callback */
+    void               *read_ctx;
+    read_callback      *read_cb;
+    /* write context and callback */
+    void               *write_ctx;
+    write_callback     *write_cb;
+    /* leak detection context and callback */
+    void               *leak_ctx;
     leak_callback      *leak_cb;
-    FILE               *last_save_file;
-    long               last_save_pos;
+
     _Bool              dirty;
     /*
      * The field order bellow is used by
@@ -56,17 +59,18 @@ size_t pvl_sizeof(size_t span_count) {
 
 static size_t pvl_sizeof_change_header(struct pvl *pvl);
 static void *pvl_change_header(struct pvl *pvl);
-static int pvl_load(struct pvl *pvl, int initial, FILE *req_from, long req_pos);
+static size_t pvl_marked_size(struct pvl *pvl);
+static int pvl_load(struct pvl *pvl);
 static int pvl_save(struct pvl *pvl);
-static void pvl_clear_memory(struct pvl *pvl);
 static void pvl_clear_spans(struct pvl *pvl);
 static void pvl_detect_leaks(struct pvl *pvl);
 static void pvl_detect_leaks_inner(struct pvl *pvl, size_t from, size_t to);
 
-struct pvl *pvl_init(char *at, size_t span_count, char *main, size_t length, char *mirror,
-    pre_load_callback pre_load_cb, post_load_callback post_load_cb,
-    pre_save_callback pre_save_cb, post_save_callback post_save_cb,
-    leak_callback leak_cb) {
+struct pvl *pvl_init(char *at, size_t span_count,
+    char *main, size_t length, char *mirror,
+    void *read_ctx, read_callback read_cb,
+    void *write_ctx, write_callback write_cb,
+    void *leak_ctx, leak_callback leak_cb) {
     /*
      * Check for alignment
      */
@@ -138,18 +142,19 @@ struct pvl *pvl_init(char *at, size_t span_count, char *main, size_t length, cha
     /*
      * Callbacks are checked at call sites
      */
-    pvl->pre_load_cb = pre_load_cb;
-    pvl->post_load_cb = post_load_cb;
+    pvl->read_ctx = read_ctx;
+    pvl->read_cb = read_cb;
 
-    pvl->pre_save_cb = pre_save_cb;
-    pvl->post_save_cb = post_save_cb;
+    pvl->write_ctx = write_ctx;
+    pvl->write_cb = write_cb;
 
+    pvl->leak_ctx = leak_ctx;
     pvl->leak_cb = leak_cb;
 
     /*
      * Perform initial load
      */
-    if (pvl_load(pvl, 1, NULL, 0) != 0) {
+    if (pvl_load(pvl) != 0) {
         return NULL;
     }
 
@@ -198,13 +203,6 @@ int pvl_commit(struct pvl *pvl) {
     return pvl_save(pvl);
 }
 
-static void pvl_clear_memory(struct pvl *pvl) {
-    memset(pvl->main, 0, pvl->length);
-    if (pvl->mirror) {
-        memset(pvl->mirror, 0, pvl->length);
-    }
-}
-
 static void pvl_clear_spans(struct pvl *pvl) {
     memset(pvl->spans, 0, (BITSET_SIZE(pvl->span_count) * sizeof(char)));
 }
@@ -219,6 +217,16 @@ static void *pvl_change_header(struct pvl *pvl) {
     return &pvl->span_length;
 }
 
+static size_t pvl_marked_size(struct pvl *pvl) {
+    size_t content_size = 0;
+    for (size_t i = 0; i < pvl->span_count; i++) {
+        if (BITSET_TEST(pvl->spans, i)) {
+            content_size += pvl->span_length;
+        }
+    }
+    return content_size;
+}
+
 /*
  * Save the currently-marked memory content
  */
@@ -231,48 +239,19 @@ static int pvl_save(struct pvl *pvl) {
     }
 
     /*
-     * Early return if there is no save handler
+     * Early return if there is no write callback
      */
-    if (pvl->pre_save_cb == NULL) {
+    if (pvl->write_cb == NULL) {
         return 0;
     }
 
-    /*
-     * Calculate the total size of the change
-     */
-    size_t content_size = 0;
-    for (size_t i = 0; i < pvl->span_count; i++) {
-        if (BITSET_TEST(pvl->spans, i)) {
-            content_size += pvl->span_length;
-        }
-    }
+    size_t content_size = pvl_marked_size(pvl);
     size_t header_size = pvl_sizeof_change_header(pvl);
-    size_t total = header_size + content_size;
-
-    /*
-     * Determine whether this is a full change
-     */
-    int full = (total == pvl->length);
-
-    /*
-     * Get the save destination through the pre-save callback
-     */
-    FILE *file = NULL;
-    file = (*pvl->pre_save_cb)(pvl, full, total);
-
-    /*
-     * Fail if the callback did not provide a place to save
-     */
-    if (file == NULL) {
-        (pvl->post_save_cb)(pvl, full, total, file, 1);
-        return 1;
-    }
 
     /*
      * Construct and save the header
      */
-    if (fwrite(pvl_change_header(pvl), header_size, 1, file) != 1) {
-        (pvl->post_save_cb)(pvl, full, total, file, 1);
+    if (pvl->write_cb(pvl->write_ctx, pvl_change_header(pvl), header_size, content_size)) {
         return 1;
     }
 
@@ -283,19 +262,11 @@ static int pvl_save(struct pvl *pvl) {
      */
     for (size_t i = 0; i < pvl->span_count; i++) {
         if (BITSET_TEST(pvl->spans, i)) {
-            if (fwrite(pvl->main + (i*pvl->span_length), pvl->span_length, 1, file) != 1) {
-                (pvl->post_save_cb)(pvl, full, total, file, 1);
+            content_size -= pvl->span_length;
+            if(pvl->write_cb(pvl->write_ctx, pvl->main + (i*pvl->span_length), pvl->span_length, content_size)) {
                 return 1;
             }
         }
-    }
-
-    /*
-     * Flush, as buffered data may otherwise be lost
-     */
-    if (fflush(file)) {
-        (pvl->post_save_cb)(pvl, full, total, file, 1);
-        return 1;
     }
 
     /*
@@ -309,69 +280,46 @@ static int pvl_save(struct pvl *pvl) {
         }
     }
 
-    /*
-     * Signal that the save is done
-     */
-    (pvl->post_save_cb)(pvl, full, total, file, 0);
-
     pvl_clear_spans(pvl);
     pvl->dirty = 0;
     return 0;
 }
 
-static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_pos) {
+static int pvl_load(struct pvl *pvl) {
     /*
-     * Cannot load anything if there is no pre-load callback
+     * Cannot load anything if there is no read callback
      */
-    if (! pvl->pre_load_cb) {
+    if (! pvl->read_cb) {
         return 0;
     }
 
-    FILE *file;
-    long last_good_pos = 0;
-    int reset_load = 0;
-
-    read_loop:
     while (1) {
-        if (reset_load) {
-            initial = 1;
-            reset_load = 0;
-            pvl_clear_memory(pvl);
-        }
-
         /*
-         * Call the pre-load callback.
+         * Try to read a change
          */
-        file = (pvl->pre_load_cb)(pvl, initial, up_to_src, up_to_pos);
-
-        if (initial) {
-            /*
-             * Only the first read in a sequence is an initial read
-             */
-            initial = 0;
-        }
-
-        if (!file) {
-            /*
-             * No file to read from
-             */
-            return 0;
-        }
-
-        /*
-         * Try to load a change from it
-         */
-        last_good_pos = ftell(file);
+        int read_result;
         size_t header_size = pvl_sizeof_change_header(pvl);
-        if (fread(pvl_change_header(pvl), header_size, 1, file) != 1) {
+        read_result = pvl->read_cb(pvl->read_ctx, pvl_change_header(pvl), header_size, 0);
+        if (read_result == EOF) {
+            /* The read callback has successfully read all (or none) changes */
+            break;
+        }
+        if (read_result) {
             /*
-             * Couldn't load the change, signal the callback
+             * The read callback failed to read a subsequent change but the pvl memory state
+             * is not disrupted - operation can continue.
              */
-            if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
-                reset_load = 1;
-                goto read_loop;
-            }
-            return 1;
+            break;
+        }
+
+        size_t content_size = pvl_marked_size(pvl);
+        read_result = pvl->read_cb(pvl->read_ctx, NULL, 0, content_size);
+        if (read_result != 0) {
+            /*
+             * The read callback indicated that it cannot serve the remaining bytes
+             * but the pvl memory state is not disrupted - operation can continue.
+             */
+             break;
         }
 
         /*
@@ -379,29 +327,18 @@ static int pvl_load(struct pvl *pvl, int initial, FILE *up_to_src, long up_to_po
          */
         for (size_t i = 0; i < pvl->span_count; i++) {
             if (BITSET_TEST(pvl->spans, i)) {
-                if (fread(pvl->main + (i*pvl->span_length), pvl->span_length, 1, file) != 1) {
-                    /*
-                     * Couldn't load the change, signal the callback
-                     */
-                    if ((pvl->post_load_cb)(pvl, file, 1, last_good_pos)) {
-                        reset_load = 1;
-                        goto read_loop;
-                    }
+                content_size -= pvl->span_length;
+                /*
+                 * At this point read should always succeed up to the remaining bytes.
+                 */
+                if (pvl->read_cb(pvl->read_ctx, pvl->main + (i*pvl->span_length), pvl->span_length, content_size) != 0) {
                     return 1;
                 }
             }
         }
         pvl_clear_spans(pvl);
-        last_good_pos = ftell(file);
-
-        /*
-         * Report success via the post-load callback
-         */
-        if ((pvl->post_load_cb)(pvl, file, 0, last_good_pos)) {
-            goto read_loop;
-        }
-        break;
     }
+    pvl_clear_spans(pvl);
 
     /*
      * Apply to mirror
@@ -433,7 +370,7 @@ static void pvl_detect_leaks_inner(struct pvl *pvl, size_t from, size_t to) {
                 /*
                  * Report diff
                  */
-                (pvl->leak_cb)(pvl, (pvl->main)+diff_start, i-diff_start);
+                pvl->leak_cb(pvl->leak_ctx, (pvl->main)+diff_start, i-diff_start);
                 /*
                  * Clear trackers
                  */
