@@ -818,6 +818,20 @@ void test_read_partial_failure_02() {
     assert(ctx.read_pos == 2);
 }
 
+void test_write_no_marks() {
+    printf("\n[test_write_no_marks]\n");
+    size_t marks_count = CTX_BUFFER_SIZE/32;
+
+    test_ctx ctx = {0};
+
+    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE, ctx.mirror, NULL, NULL, &ctx, write_cb, NULL, NULL);
+    assert(ctx.pvl != NULL);
+
+    // Commit with no data
+    assert(!pvl_commit(ctx.pvl));
+    assert(ctx.write_pos == 0);
+}
+
 void test_write_failure_01() {
     printf("\n[test_write_failure_01]\n");
     size_t marks_count = CTX_BUFFER_SIZE/32;
@@ -1004,6 +1018,8 @@ int main() {
 
         test_read_partial_failure_01();
         test_read_partial_failure_02();
+
+        test_write_no_marks();
 
         test_write_failure_01();
         test_write_failure_02();

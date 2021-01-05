@@ -40,7 +40,6 @@ struct pvl {
 	/* leak detection context and callback */
 	void *leak_ctx;
 	leak_callback *leak_cb;
-	_Bool dirty;
 	size_t span_length;
 	size_t span_count;
 	char spans[];
@@ -149,18 +148,12 @@ int pvl_mark(struct pvl *pvl, char *start, size_t length) {
 		BITSET_SET(pvl->spans, i);
 	}
 
-	pvl->dirty = 1;
 	return 0;
 }
 
 int pvl_commit(struct pvl *pvl) {
 	if (pvl == NULL) {
 		return 1;
-	}
-
-	/* Commit with no marks is a no-op */
-	if (! pvl->dirty) {
-		return 0;
 	}
 
 	return pvl_save(pvl);
@@ -199,6 +192,11 @@ static int pvl_save(struct pvl *pvl) {
 				/* do nothing */
 			}
 		}
+	}
+
+	/* Nothing to save */
+	if (spans == 0) {
+		return 0;
 	}
 
 	/* Track remaining bytes for write hints */
@@ -257,7 +255,6 @@ static int pvl_save(struct pvl *pvl) {
 	}
 
 	memset(pvl->spans, 0, (BITSET_SIZE(pvl->span_count) * sizeof(char)));;
-	pvl->dirty = 0;
 	return 0;
 }
 
