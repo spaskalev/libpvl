@@ -95,39 +95,30 @@ typedef void leak_callback(void *ctx, void *start, size_t length);
  * Ensure that it is aligned to max_align_t. Do not copy after initialization.
  *
  * Passed parameters
- *
  * at                 - Pointer to where the pvl object should be initialized
  * span_count         - Span count to allocate to track changes
- * 
  * main               - Pointer to the start of a pvl-managed memory block
  * length             - The lenght of the pvl-managed memory block
  *                      It must be divisible by span_count.
- * 
- * mirror             - Pointer to the start of a pvl-managed mirror memory block
- *                      that is used for additional capabilities like
- *                      leak detection.
- *                      Set to NULL to disable the additional capabilities.
- * 
- * read_ctx           - Caller-provided context to pass to read_cb
- * read_cb            - Callback for loading changes
- * 
- * write_ctx          - Caller-provided context to pass to write_cb
- * write_cb           - Callback for persisting changes
- * 
- * leak_ctx           - Caller-provided context to pass to leak_cb
- * leak_cb            - Callback used to report detected leaks - changed but
- *                      not marked memory spans after pvl_commit
  *
  * Returns
- *
  * pvl_t*             - A valid pointer to pvl_t in the case of a successful initialization,
  *                      NULL otherwise.
  */
 struct pvl *pvl_init(char *at, size_t span_count,
-    char *main, size_t length, char *mirror,
-    void *read_ctx, read_callback read_cb,
-    void *write_ctx, write_callback write_cb,
-    void *leak_ctx, leak_callback leak_cb);
+    char *main, size_t length);
+
+/* Configure the read handler on a pvl instance and trigger a load */
+int pvl_set_read_cb(struct pvl *pvl, void *read_ctx, read_callback read_cb);
+
+/* Configure the write handler on a pvl instance */
+int pvl_set_write_cb(struct pvl *pvl, void *write_ctx, write_callback write_cb);
+
+/* Configure a mirror on the pvl instance, used for leak detection and other stats*/
+int pvl_set_mirror(struct pvl *pvl, char *mirror);
+
+/* Configure the leak detection handler on a pvl instance. Requires a mirror */
+int pvl_set_leak_cb(struct pvl *pvl, void *leak_ctx, leak_callback leak_cb);
 
 /*
  * Mark a span of memory for inclusion in the next commit.
