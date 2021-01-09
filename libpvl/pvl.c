@@ -55,7 +55,7 @@ size_t pvl_sizeof(size_t span_count) {
 	return sizeof(struct pvl)+(BITSET_SIZE(span_count) * sizeof(char));
 }
 
-//static void pvl_span(struct pvl *pvl, size_t *from, _Bool marked);
+static size_t pvl_next_span(struct pvl *pvl, size_t from, struct pvl_span *span);
 static void pvl_stat(struct pvl *pvl, size_t *spans, size_t *size);
 static int pvl_load(struct pvl *pvl);
 static int pvl_save(struct pvl *pvl);
@@ -142,7 +142,7 @@ int pvl_mark(struct pvl *pvl, char *start, size_t length) {
 	}
 
 	/* Validate the span */
-	if ((length == 0) || (start < pvl->main)
+	if ((start == NULL) || (length == 0) || (start < pvl->main)
 			|| ((start+length) > (pvl->main+pvl->length))) {
 		return 1;
 	}

@@ -98,8 +98,13 @@ function test_optlevels() {
     done
 }
 
+function sca_checks() {
+	cppcheck --error-exitcode=1 $@
+}
+
 function test() {
     test_coverage $@
+    sca_checks $@
     #test_optlevels $@
 }
 
