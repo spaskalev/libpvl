@@ -62,8 +62,7 @@ static int pvl_save(struct pvl *pvl);
 static void pvl_detect_leaks(struct pvl *pvl);
 static void pvl_detect_leaks_inner(struct pvl *pvl, size_t from, size_t to);
 
-struct pvl *pvl_init(char *at, size_t span_count,
-		char *main, size_t length) {
+struct pvl *pvl_init(char *at, char *main, size_t length, size_t span_count) {
 	/* Check for alignment */
 	size_t alignment = ((uintptr_t) at) % alignof(max_align_t);
 	if (alignment != 0) {

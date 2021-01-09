@@ -96,17 +96,16 @@ typedef void leak_callback(void *ctx, void *start, size_t length);
  *
  * Passed parameters
  * at                 - Pointer to where the pvl object should be initialized
- * span_count         - Span count to allocate to track changes
  * main               - Pointer to the start of a pvl-managed memory block
  * length             - The lenght of the pvl-managed memory block
  *                      It must be divisible by span_count.
+ * span_count         - The number of internal spans used to track changes
  *
  * Returns
  * pvl_t*             - A valid pointer to pvl_t in the case of a successful initialization,
  *                      NULL otherwise.
  */
-struct pvl *pvl_init(char *at, size_t span_count,
-    char *main, size_t length);
+struct pvl *pvl_init(char *at, char *main, size_t length, size_t span_count);
 
 /* Configure the read handler on a pvl instance and trigger a load */
 int pvl_set_read_cb(struct pvl *pvl, void *read_ctx, read_callback read_cb);

@@ -13,62 +13,62 @@ void test_init_misalignment() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)+1];
     char main_mem[1024];
     // Ensure wrong alignment (max_align_t+1)
-    struct pvl *pvl = pvl_init(pvlbuf+1, 1, main_mem, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf+1, main_mem, 1024, 1);
     assert (pvl == NULL);
 }
 
 void test_init_alignment() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char main_mem[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, main_mem, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, main_mem, 1024, 1);
     assert(pvl != NULL);
 }
 
 void test_init_zero_marks() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(0)];
     char main_mem[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 0, main_mem, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, main_mem, 1024, 0);
     assert(pvl == NULL);
 }
 
 void test_init_null_main() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, NULL, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, NULL, 1024, 1);
     assert(pvl == NULL);
 }
 
 void test_init_non_null_main() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char main_mem[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, main_mem, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, main_mem, 1024, 1);
     assert(pvl != NULL);
 }
 
 void test_init_zero_length() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char main_mem[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, main_mem, 0);
+    struct pvl *pvl = pvl_init(pvlbuf, main_mem, 0, 1);
     assert(pvl == NULL);
 }
 
 void test_init_non_zero_length() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char main_mem[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, main_mem, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, main_mem, 1024, 1);
     assert(pvl != NULL);
 }
 
 void test_init_non_divisible_spans() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char main_mem[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 3, main_mem, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, main_mem, 1024, 3);
     assert(pvl == NULL);
 }
 
 void test_init_main_mirror_overlap() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 512);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 512, 1);
     assert(pvl != NULL);
     assert(pvl_set_mirror(pvl, buffer+256) != 0);
 }
@@ -76,7 +76,7 @@ void test_init_main_mirror_overlap() {
 void test_init_main_mirror_no_overlap() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 512);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 512, 1);
     assert(pvl != NULL);
     assert(pvl_set_mirror(pvl, buffer+512) == 0);
 }
@@ -84,7 +84,7 @@ void test_init_main_mirror_no_overlap() {
 void test_init_mirror_main_overlap() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer+256, 512);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer+256, 512, 1);
     assert(pvl != NULL);
     assert(pvl_set_mirror(pvl, buffer) != 0);
 }
@@ -92,7 +92,7 @@ void test_init_mirror_main_overlap() {
 void test_init_mirror_main_no_overlap() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer+512, 512);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer+512, 512, 1);
     assert(pvl != NULL);
     assert(pvl_set_mirror(pvl, buffer) == 0);
 }
@@ -107,63 +107,63 @@ void test_mark_pvl_null() {
 void test_mark_mark_null() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
     assert(pvl_mark(pvl, NULL, 128));
 }
 
 void test_mark_zero_length() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
     assert(pvl_mark(pvl, buffer, 0));
 }
 
 void test_mark_before_main() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer+512, 512);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer+512, 512, 1);
     assert(pvl_mark(pvl, buffer, 64));
 }
 
 void test_mark_mark_main_overlap() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer+512, 512);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer+512, 512, 1);
     assert(pvl_mark(pvl, buffer+496, 64));
 }
 
 void test_mark_main_mark_overlap() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 512);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 512, 1);
     assert(pvl_mark(pvl, buffer+496, 64));
 }
 
 void test_mark_after_main() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 512);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 512, 1);
     assert(pvl_mark(pvl, buffer+768, 64));
 }
 
 void test_mark_start_of_main() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
     assert(!pvl_mark(pvl, buffer, 64));
 }
 
 void test_mark_middle_of_main() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
     assert(!pvl_mark(pvl, buffer+512, 64));
 }
 
 void test_mark_end_of_main() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
     assert(!pvl_mark(pvl, buffer+960, 64));
 }
 
@@ -171,7 +171,7 @@ void test_mark_all_of_main() {
     int marks = 8;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(marks)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, marks, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, marks);
     assert(!pvl_mark(pvl, buffer, 1024));
 }
 
@@ -179,7 +179,7 @@ void test_mark_extra_marks() {
     int marks = 2;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(marks)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, marks, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, marks);
     assert(!pvl_mark(pvl, buffer, 10));
     assert(!pvl_mark(pvl, buffer, 20));
     assert(!pvl_mark(pvl, buffer, 30));
@@ -194,14 +194,14 @@ void test_commit_pvl_null() {
 void test_commit_no_mark() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
     assert(!pvl_commit(pvl));
 }
 
 void test_commit_single_mark() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
     assert(!pvl_mark(pvl, buffer, 128));
     assert(!pvl_commit(pvl));
 }
@@ -210,7 +210,7 @@ void test_commit_max_marks() {
     size_t marks = 8;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(marks)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, marks, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, marks);
     for (size_t i = 0; i < marks; i++) {
         assert(!pvl_mark(pvl, buffer+i, 1));
     }
@@ -221,7 +221,7 @@ void test_commit_over_max_marks() {
     size_t marks = 8;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(marks)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
     for (size_t i = 0; i < marks; i++) {
         assert(!pvl_mark(pvl, buffer+i, 1));
     }
@@ -275,7 +275,7 @@ void test_set_leak_cb_null_pvl() {
 void test_set_read_cb_twice() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
     assert(pvl_set_read_cb(pvl, NULL, noop_read_cb) == 0);
     assert(pvl_set_read_cb(pvl, NULL, noop_read_cb) != 0);
 }
@@ -283,7 +283,7 @@ void test_set_read_cb_twice() {
 void test_set_write_cb_twice() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
     assert(pvl_set_write_cb(pvl, NULL, noop_write_cb) == 0);
     assert(pvl_set_write_cb(pvl, NULL, noop_write_cb) != 0);
     // Ensure line coverage
@@ -294,7 +294,7 @@ void test_set_mirror_twice() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     char mirror[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
     assert(pvl_set_mirror(pvl, mirror) == 0);
     assert(pvl_set_mirror(pvl, mirror) != 0);
 }
@@ -303,7 +303,7 @@ void test_set_leak_cb_twice() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     char mirror[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
     assert(pvl_set_mirror(pvl, mirror) == 0);
     assert(pvl_set_leak_cb(pvl, NULL, noop_leak_cb) == 0);
     assert(pvl_set_leak_cb(pvl, NULL, noop_leak_cb) != 0);
@@ -314,7 +314,7 @@ void test_set_leak_cb_twice() {
 void test_init_leak_no_mirror() {
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
-    struct pvl *pvl = pvl_init(pvlbuf, 1, buffer, 1024);
+    struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
     assert(pvl != NULL);
     assert(pvl_set_leak_cb(pvl, NULL, noop_leak_cb) != 0);
     // call empty cb, ensure line coverage
@@ -430,7 +430,7 @@ void test_basic_commit() {
 
     test_ctx ctx = {0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
 
@@ -513,7 +513,7 @@ void test_basic_commit() {
     ctx.read_data[8].return_int = EOF;
 
     // Create a new pvl to read the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
 	assert(ctx.pvl != NULL);
 	assert(pvl_set_read_cb(ctx.pvl, &ctx, read_cb) == 0);
     assert(ctx.read_pos == 9);
@@ -534,7 +534,7 @@ void test_basic_commit_mirror() {
 
     test_ctx ctx = {0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_mirror(ctx.pvl, ctx.mirror) == 0);
 	assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
@@ -611,7 +611,7 @@ void test_basic_commit_mirror() {
     ctx.read_data[4].return_int = EOF;
 
     // Create a new pvl to read the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
 	assert(ctx.pvl != NULL);
 	assert(pvl_set_mirror(ctx.pvl, ctx.mirror) == 0);
 	assert(pvl_set_read_cb(ctx.pvl, &ctx, read_cb) == 0);
@@ -642,7 +642,7 @@ void test_read_failure_01() {
 
     test_ctx ctx = {0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
 
@@ -701,7 +701,7 @@ void test_read_failure_01() {
     ctx.read_data[2].return_int = 1;
 
     // Create a new pvl to read the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_read_cb(ctx.pvl, &ctx, read_cb) != 0);
     assert(ctx.read_pos == 3);
@@ -713,7 +713,7 @@ void test_read_failure_02() {
 
     test_ctx ctx = {0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
 
@@ -776,7 +776,7 @@ void test_read_failure_02() {
     ctx.read_data[3].return_int = 1;
 
     // Create a new pvl to read the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_read_cb(ctx.pvl, &ctx, read_cb) == 1);
     assert(ctx.read_pos == 4);
@@ -788,7 +788,7 @@ void test_read_partial_failure_01() {
 
     test_ctx ctx = {0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
 
@@ -839,7 +839,7 @@ void test_read_partial_failure_01() {
     ctx.read_data[0].return_int = 1;
 
     // Create a new pvl to read the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_read_cb(ctx.pvl, &ctx, read_cb) == 0);
     assert(ctx.read_pos == 1);
@@ -851,7 +851,7 @@ void test_read_partial_failure_02() {
 
     test_ctx ctx = {0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
 
@@ -906,7 +906,7 @@ void test_read_partial_failure_02() {
     ctx.read_data[1].return_int = 1;
 
     // Create a new pvl to read the data
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_read_cb(ctx.pvl, &ctx, read_cb) == 0);
     assert(ctx.read_pos == 2);
@@ -918,7 +918,7 @@ void test_write_no_marks() {
 
     test_ctx ctx = {0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_mirror(ctx.pvl, ctx.mirror) == 0);
     assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
@@ -934,7 +934,7 @@ void test_write_failure_01() {
 
     test_ctx ctx = {0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_mirror(ctx.pvl, ctx.mirror) == 0);
     assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
@@ -957,7 +957,7 @@ void test_write_failure_02() {
 
     test_ctx ctx = {0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_mirror(ctx.pvl, ctx.mirror) == 0);
     assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
@@ -984,7 +984,7 @@ void test_write_failure_03() {
 
     test_ctx ctx = {0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_mirror(ctx.pvl, ctx.mirror) == 0);
     assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
@@ -1015,7 +1015,7 @@ void test_leak_detected() {
 
     test_ctx ctx = {0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_mirror(ctx.pvl, ctx.mirror) == 0);
     assert(pvl_set_leak_cb(ctx.pvl, &ctx, leak_cb) == 0);
@@ -1051,7 +1051,7 @@ void test_leak_no_leak() {
 
     test_ctx ctx = {0};
 
-    ctx.pvl = pvl_init(ctx.pvl_at, marks_count, ctx.main, CTX_BUFFER_SIZE);
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
     assert(ctx.pvl != NULL);
     assert(pvl_set_mirror(ctx.pvl, ctx.mirror) == 0);
     assert(pvl_set_leak_cb(ctx.pvl, &ctx, leak_cb) == 0);
