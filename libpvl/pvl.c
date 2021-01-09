@@ -79,11 +79,10 @@ struct pvl *pvl_init(char *at, size_t span_count,
 	}
 
 	/* Check for overlap between main and mirror blocks */
-	if (mirror != NULL) {
-		if (((mirror <= main) && ((mirror+length) > main)) ||
-			((main <= mirror) && ((main+length) > mirror))) {
-			return NULL;
-		}
+	if ((mirror != NULL)  &&
+			(((mirror <= main) && ((mirror+length) > main)) ||
+			((main <= mirror) && ((main+length) > mirror)))) {
+		return NULL;
 	}
 
 	/* main must not be NULL */
@@ -262,10 +261,9 @@ static int pvl_save(struct pvl *pvl) {
 	if (pvl->mirror) {
 		next = 0;
 		while((next = pvl_next_span(pvl, next, &span))) {
-			if (! span.marked) {
-				continue;
+			if (span.marked) {
+				memcpy(pvl->mirror + span.index, pvl->main + span.index, span.length);
 			}
-			memcpy(pvl->mirror + span.index, pvl->main + span.index, span.length);
 		}
 	}
 
@@ -336,10 +334,9 @@ static void pvl_detect_leaks(struct pvl *pvl) {
 	size_t next = 0;
 	struct pvl_span span;
 	while((next = pvl_next_span(pvl, next, &span))) {
-		if (span.marked) {
-			continue;
+		if (! span.marked) {
+			pvl_detect_leaks_inner(pvl, span.index, span.length);
 		}
-		pvl_detect_leaks_inner(pvl, span.index, span.length);
 	}
 }
 
