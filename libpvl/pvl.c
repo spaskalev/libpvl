@@ -49,6 +49,7 @@ size_t pvl_sizeof(size_t span_count) {
 	return sizeof(struct pvl)+(BITSET_SIZE(span_count) * sizeof(char));
 }
 
+static void pvl_stat(struct pvl *pvl, size_t *spans, size_t *size);
 static int pvl_load(struct pvl *pvl);
 static int pvl_save(struct pvl *pvl);
 static void pvl_detect_leaks(struct pvl *pvl);
@@ -67,7 +68,6 @@ struct pvl *pvl_init(char *at, size_t span_count,
 
 	/* Leak detection requires a mirror */
 	if ((!mirror) && leak_cb) {
-
 		return NULL;
 	}
 
@@ -156,34 +156,26 @@ int pvl_commit(struct pvl *pvl) {
 		return 1;
 	}
 
-	return pvl_save(pvl);
-}
-
-/* Save the currently-marked memory content */
-static int pvl_save(struct pvl *pvl) {
 	/* Perform leak detection */
 	if (pvl->leak_cb) {
 		pvl_detect_leaks(pvl);
 	}
 
-	/* Early return if there is no write callback */
-	if (pvl->write_cb == NULL) {
-		return 0;
-	}
+	return pvl_save(pvl);
+}
 
-	/* Get the total number of spans and marked bytes */
-	size_t spans = 0;
-	size_t size = 0;
+static void pvl_stat(struct pvl *pvl, size_t *spans, size_t *size) {
 	_Bool in_span = 0;
-
+	*spans = 0;
+	*size = 0;
 	for (size_t i = 0; i < pvl->span_count; i++) {
 		if (BITSET_TEST(pvl->spans, i)) {
-			size += pvl->span_length;
+			*size += pvl->span_length;
 			if (in_span) {
 				/* do nothing */
 			} else {
 				in_span = 1;
-				spans++;
+				(*spans)++;
 			}
 		} else {
 			if (in_span) {
@@ -193,6 +185,20 @@ static int pvl_save(struct pvl *pvl) {
 			}
 		}
 	}
+}
+
+/* Save the currently-marked memory content */
+static int pvl_save(struct pvl *pvl) {
+
+	/* Early return if there is no write callback */
+	if (pvl->write_cb == NULL) {
+		return 0;
+	}
+
+	/* Get the total number of spans and marked bytes */
+	size_t spans = 0;
+	size_t size = 0;
+	pvl_stat(pvl, &spans, &size);
 
 	/* Nothing to save */
 	if (spans == 0) {
@@ -213,6 +219,7 @@ static int pvl_save(struct pvl *pvl) {
 	}
 
 	/* Save each span */
+	_Bool in_span = 0;
 	for (size_t i = 0; i < pvl->span_count; i++) {
 		if (BITSET_TEST(pvl->spans, i)) {
 			if (in_span) {
@@ -254,6 +261,7 @@ static int pvl_save(struct pvl *pvl) {
 		}
 	}
 
+	/* Clear the spans */
 	memset(pvl->spans, 0, (BITSET_SIZE(pvl->span_count) * sizeof(char)));;
 	return 0;
 }
