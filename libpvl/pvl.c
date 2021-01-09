@@ -24,8 +24,7 @@
 #define BITSET_POS(pos) ((pos) / CHAR_BIT)
 #define BITSET_MASK(pos) (1 << ((pos) % CHAR_BIT))
 #define BITSET_SET(name, pos) ((name)[BITSET_POS(pos)] |= BITSET_MASK(pos))
-#define BITSET_RESET(name, pos) ((name)[BITSET_POS(pos)] *= ~BITSET_MASK(pos))
-#define BITSET_TEST(name, pos) ((name)[BITSET_POS(pos)] & BITSET_MASK(pos))
+#define BITSET_TEST(name, pos) ((_Bool)((name)[BITSET_POS(pos)] & BITSET_MASK(pos)))
 
 struct pvl {
 	char *main;
@@ -45,10 +44,18 @@ struct pvl {
 	char spans[];
 };
 
+struct pvl_span {
+	size_t index;
+	size_t length;
+	_Bool marked;
+
+};
+
 size_t pvl_sizeof(size_t span_count) {
 	return sizeof(struct pvl)+(BITSET_SIZE(span_count) * sizeof(char));
 }
 
+//static void pvl_span(struct pvl *pvl, size_t *from, _Bool marked);
 static void pvl_stat(struct pvl *pvl, size_t *spans, size_t *size);
 static int pvl_load(struct pvl *pvl);
 static int pvl_save(struct pvl *pvl);
@@ -164,25 +171,35 @@ int pvl_commit(struct pvl *pvl) {
 	return pvl_save(pvl);
 }
 
+/* Find the next continuous span */
+static size_t pvl_next_span(struct pvl *pvl, size_t from, struct pvl_span *span) {
+	if (from == pvl->span_count) {
+		return 0;
+	}
+
+	span->marked = BITSET_TEST(pvl->spans, from);
+	span->index = from * pvl->span_length;
+	span->length = pvl->span_length;
+
+	for (size_t i = from+1; i < pvl->span_count; i++) {
+		if (span->marked ^ BITSET_TEST(pvl->spans, i)) {
+			return i;
+		}
+		span->length += pvl->span_length;
+	}
+
+	return pvl->span_count;
+}
+
 static void pvl_stat(struct pvl *pvl, size_t *spans, size_t *size) {
-	_Bool in_span = 0;
 	*spans = 0;
 	*size = 0;
-	for (size_t i = 0; i < pvl->span_count; i++) {
-		if (BITSET_TEST(pvl->spans, i)) {
-			*size += pvl->span_length;
-			if (in_span) {
-				/* do nothing */
-			} else {
-				in_span = 1;
-				(*spans)++;
-			}
-		} else {
-			if (in_span) {
-				in_span = 0;
-			} else {
-				/* do nothing */
-			}
+	size_t next = 0;
+	struct pvl_span span;
+	while((next = pvl_next_span(pvl, next, &span))) {
+		if (span.marked) {
+			(*spans)++;
+			*size += span.length;
 		}
 	}
 }
@@ -219,45 +236,36 @@ static int pvl_save(struct pvl *pvl) {
 	}
 
 	/* Save each span */
-	_Bool in_span = 0;
-	for (size_t i = 0; i < pvl->span_count; i++) {
-		if (BITSET_TEST(pvl->spans, i)) {
-			if (in_span) {
-				/* Do nothing */
-			} else {
-				/* Track the span */
-				in_span = 1;
-				header[0] = i * pvl->span_length;
-			}
-		} else {
-			if (in_span) {
-				/* Span is done */
-				in_span = 0;
-				header[1] = i * pvl->span_length - header[0];
+	size_t next = 0;
+	struct pvl_span span;
+	while((next = pvl_next_span(pvl, next, &span))) {
+		if (! span.marked) {
+			continue;
+		}
 
-				/* Write the span header */
-				content_size -= sizeof(header);
-				if(pvl->write_cb(pvl->write_ctx, &header, sizeof(header), content_size)) {
-					return 1;
-				}
+		/* Write the span header */
+		header[0] = span.index;
+		header[1] = span.length;
+		content_size -= sizeof(header);
+		if(pvl->write_cb(pvl->write_ctx, &header, sizeof(header), content_size)) {
+			return 1;
+		}
 
-				/* Write the span content */
-				content_size -= header[1];
-				if(pvl->write_cb(pvl->write_ctx, pvl->main + header[0], header[1], content_size)) {
-					return 1;
-				}
-			} else {
-				/* Do nothing */
-			}
+		/* Write the span content */
+		content_size -= header[1];
+		if(pvl->write_cb(pvl->write_ctx, pvl->main + header[0], header[1], content_size)) {
+			return 1;
 		}
 	}
 
 	/* Apply to mirror */
 	if (pvl->mirror) {
-		for (size_t i = 0; i < pvl->span_count; i++) {
-			if (BITSET_TEST(pvl->spans, i)) {
-				memcpy(pvl->mirror + (i*pvl->span_length), pvl->main + (i*pvl->span_length), pvl->span_length);
+		next = 0;
+		while((next = pvl_next_span(pvl, next, &span))) {
+			if (! span.marked) {
+				continue;
 			}
+			memcpy(pvl->mirror + span.index, pvl->main + span.index, span.length);
 		}
 	}
 
@@ -325,10 +333,13 @@ static int pvl_load(struct pvl *pvl) {
 }
 
 static void pvl_detect_leaks(struct pvl *pvl) {
-	for (size_t i = 0; i < pvl->span_count; i++) {
-		if (! BITSET_TEST(pvl->spans, i)) {
-			pvl_detect_leaks_inner(pvl, (i*pvl->span_length), (i*pvl->span_length) + pvl->span_length);
+	size_t next = 0;
+	struct pvl_span span;
+	while((next = pvl_next_span(pvl, next, &span))) {
+		if (span.marked) {
+			continue;
 		}
+		pvl_detect_leaks_inner(pvl, span.index, span.length);
 	}
 }
 
