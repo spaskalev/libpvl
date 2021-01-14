@@ -1,3 +1,3 @@
 #!/bin/bash
 
-ls *.c *.h test.sh | entr ./test.sh
+ls *.c *.h Makefile | entr -n make

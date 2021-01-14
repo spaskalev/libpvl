@@ -324,7 +324,9 @@ void test_init_leak_no_mirror() {
 /*
  * Define the guard to test implementation details
  */
+#ifndef WARNING_DO_NOT_INCLUDE_PLV_C
 #define WARNING_DO_NOT_INCLUDE_PLV_C
+#endif
 #include "pvl.c"
 
 typedef struct {
