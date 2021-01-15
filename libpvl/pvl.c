@@ -253,7 +253,7 @@ static int pvl_save(struct pvl *pvl) {
 	header[0] = spans;
 	header[1] = content_size;
 
-	/* Construct and save the header */
+	/* Construct and save the change header */
 	if (pvl->write_cb(pvl->write_ctx, &header, sizeof(header), header[1])) {
 		return 1;
 	}
@@ -268,7 +268,7 @@ static int pvl_save(struct pvl *pvl) {
 
 		/* Write the span header */
 		header[0] = span.index;
-		header[1] = span.length;
+		header[1] = span.index + span.length;
 		content_size -= sizeof(header);
 		if(pvl->write_cb(pvl->write_ctx, &header, sizeof(header), content_size)) {
 			return 1;
@@ -276,7 +276,7 @@ static int pvl_save(struct pvl *pvl) {
 
 		/* Write the span content */
 		content_size -= header[1];
-		if(pvl->write_cb(pvl->write_ctx, pvl->main + header[0], header[1], content_size)) {
+		if(pvl->write_cb(pvl->write_ctx, pvl->main + span.index, span.length, content_size)) {
 			return 1;
 		}
 	}
@@ -317,13 +317,20 @@ static int pvl_load(struct pvl *pvl) {
 		size_t content_size = header[1];
 
 		/*
-		 * TODO Validate the header
-		 *
-		 * spans cannot be zero
-		 * content size cannot be zero
-		 * content size cannot be smaller than spans*(sizeof(span header) + 1) ?
-	     * determine upper bound (impl ?)
+		 * Validate the change header
 		 */
+		if (spans == 0) {
+			break; /* spans cannot be zero */
+		}
+		if (spans > (pvl->length/2)) {
+			break; /* span count upper bound for a byte-tracking pvl with every other byte marked */
+		}
+		if (content_size < (spans*(sizeof(header)+1))) {
+			break; /* content size lower bound for a byte-tracking single byte mark */
+		}
+		if (content_size > (pvl->length/2*(sizeof(header)+1))) {
+			break; /* content size upper bound for a byte-tracking pvl with every other byte marked */
+		}
 
 		read_result = pvl->read_cb(pvl->read_ctx, NULL, 0, content_size);
 		if (read_result != 0) {
@@ -343,15 +350,21 @@ static int pvl_load(struct pvl *pvl) {
 			}
 
 			/*
-			 * TODO Validate the header
-			 *
-			 * start + length must fit within pvl main block
-			 * overflow concerns - a crafted input should not be able to be loaded in the wrong place
+			 * Validate the span header
 			 */
+			if (header[0] >= pvl->length) {
+				return 1; /* span start location must be within pvl main block */
+			}
+			if (header[1] >= pvl->length) {
+				return 1; /* span end location must be within pvl main block */
+			}
+			if (header[1] <= header[0]) {
+				return 1; /* invalid span end location */
+			}
 
 			/* Read the content */
 			content_size -= header[1];
-			if (pvl->read_cb(pvl->read_ctx, pvl->main + header[0], header[1], content_size) != 0) {
+			if (pvl->read_cb(pvl->read_ctx, pvl->main + header[0], header[1] - header[0], content_size) != 0) {
 				return 1;
 			}
 		}

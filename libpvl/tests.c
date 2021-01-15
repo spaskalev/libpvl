@@ -1009,6 +1009,498 @@ void test_write_failure_03() {
     assert(ctx.write_pos == 3);
 }
 
+void test_invalid_change_header_01() {
+	printf("\n[test_invalid_change_header_01]\n");
+    size_t marks_count = 8;
+
+    test_ctx ctx = {0};
+
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+    assert(ctx.pvl != NULL);
+    assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
+
+    ctx.write_data[0].expected_length = pvl_header_size;
+    ctx.write_data[0].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[0].return_int = 0;
+
+    ctx.write_data[1].expected_length = pvl_header_size;
+    ctx.write_data[1].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[1].return_int = 0;
+
+    ctx.write_data[2].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.write_data[2].expected_remaining = 0;
+    ctx.write_data[2].return_int = 0;
+
+    // Write and commit some data
+    memset(ctx.main, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.main, 64));
+    assert(!pvl_commit(ctx.pvl));
+
+    assert(ctx.write_pos == 3);
+
+    // Prepare for reading the data
+    ctx.iobuf_pos = 0;
+    memset(ctx.main, 0, CTX_BUFFER_SIZE);
+
+    // Corrupt the header
+    size_t *h_ptr = (size_t *) ctx.iobuf;
+    h_ptr[0] = 0;
+
+	// Proper read handlers
+    ctx.read_data[0].expected_length = pvl_header_size;
+    ctx.read_data[0].expected_remaining = 0;
+    ctx.read_data[0].return_int = 0;
+
+    ctx.read_data[1].expected_length = 0;
+    ctx.read_data[1].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[1].return_int = 0;
+
+    ctx.read_data[2].expected_length = pvl_header_size;
+    ctx.read_data[2].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[2].return_int = 0;
+
+    ctx.read_data[3].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[3].expected_remaining = 0;
+    ctx.read_data[3].return_int = 0;
+
+    ctx.read_data[4].expected_length = pvl_header_size;
+    ctx.read_data[4].expected_remaining = 0;
+    ctx.read_data[4].return_int = EOF;
+
+    // Create a new pvl to read the data
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+	assert(ctx.pvl != NULL);
+	assert(pvl_set_read_cb(ctx.pvl, &ctx, read_cb) == 0);
+    assert(ctx.read_pos == 1);
+
+    // Verify that no changes have been applied
+    for (size_t i = 0; i < CTX_BUFFER_SIZE; i++) {
+        assert(ctx.main[i] == 0);
+    }
+}
+
+void test_invalid_change_header_02() {
+	printf("\n[test_invalid_change_header_02]\n");
+    size_t marks_count = 8;
+
+    test_ctx ctx = {0};
+
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+    assert(ctx.pvl != NULL);
+    assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
+
+    ctx.write_data[0].expected_length = pvl_header_size;
+    ctx.write_data[0].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[0].return_int = 0;
+
+    ctx.write_data[1].expected_length = pvl_header_size;
+    ctx.write_data[1].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[1].return_int = 0;
+
+    ctx.write_data[2].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.write_data[2].expected_remaining = 0;
+    ctx.write_data[2].return_int = 0;
+
+    // Write and commit some data
+    memset(ctx.main, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.main, 64));
+    assert(!pvl_commit(ctx.pvl));
+
+    assert(ctx.write_pos == 3);
+
+    // Prepare for reading the data
+    ctx.iobuf_pos = 0;
+    memset(ctx.main, 0, CTX_BUFFER_SIZE);
+
+    // Corrupt the header
+    size_t *h_ptr = (size_t *) ctx.iobuf;
+    h_ptr[0] = (CTX_BUFFER_SIZE/2)+1;
+
+	// Proper read handlers
+    ctx.read_data[0].expected_length = pvl_header_size;
+    ctx.read_data[0].expected_remaining = 0;
+    ctx.read_data[0].return_int = 0;
+
+    ctx.read_data[1].expected_length = 0;
+    ctx.read_data[1].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[1].return_int = 0;
+
+    ctx.read_data[2].expected_length = pvl_header_size;
+    ctx.read_data[2].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[2].return_int = 0;
+
+    ctx.read_data[3].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[3].expected_remaining = 0;
+    ctx.read_data[3].return_int = 0;
+
+    ctx.read_data[4].expected_length = pvl_header_size;
+    ctx.read_data[4].expected_remaining = 0;
+    ctx.read_data[4].return_int = EOF;
+
+    // Create a new pvl to read the data
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+	assert(ctx.pvl != NULL);
+	assert(pvl_set_read_cb(ctx.pvl, &ctx, read_cb) == 0);
+    assert(ctx.read_pos == 1);
+
+    // Verify that no changes have been applied
+    for (size_t i = 0; i < CTX_BUFFER_SIZE; i++) {
+        assert(ctx.main[i] == 0);
+    }
+}
+
+void test_invalid_change_header_03() {
+	printf("\n[test_invalid_change_header_03]\n");
+    size_t marks_count = 8;
+
+    test_ctx ctx = {0};
+
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+    assert(ctx.pvl != NULL);
+    assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
+
+    ctx.write_data[0].expected_length = pvl_header_size;
+    ctx.write_data[0].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[0].return_int = 0;
+
+    ctx.write_data[1].expected_length = pvl_header_size;
+    ctx.write_data[1].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[1].return_int = 0;
+
+    ctx.write_data[2].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.write_data[2].expected_remaining = 0;
+    ctx.write_data[2].return_int = 0;
+
+    // Write and commit some data
+    memset(ctx.main, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.main, 64));
+    assert(!pvl_commit(ctx.pvl));
+
+    assert(ctx.write_pos == 3);
+
+    // Prepare for reading the data
+    ctx.iobuf_pos = 0;
+    memset(ctx.main, 0, CTX_BUFFER_SIZE);
+
+    // Corrupt the header
+    size_t *h_ptr = (size_t *) ctx.iobuf;
+    h_ptr[1] = 0;
+
+	// Proper read handlers
+    ctx.read_data[0].expected_length = pvl_header_size;
+    ctx.read_data[0].expected_remaining = 0;
+    ctx.read_data[0].return_int = 0;
+
+    ctx.read_data[1].expected_length = 0;
+    ctx.read_data[1].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[1].return_int = 0;
+
+    ctx.read_data[2].expected_length = pvl_header_size;
+    ctx.read_data[2].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[2].return_int = 0;
+
+    ctx.read_data[3].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[3].expected_remaining = 0;
+    ctx.read_data[3].return_int = 0;
+
+    ctx.read_data[4].expected_length = pvl_header_size;
+    ctx.read_data[4].expected_remaining = 0;
+    ctx.read_data[4].return_int = EOF;
+
+    // Create a new pvl to read the data
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+	assert(ctx.pvl != NULL);
+	assert(pvl_set_read_cb(ctx.pvl, &ctx, read_cb) == 0);
+    assert(ctx.read_pos == 1);
+
+    // Verify that no changes have been applied
+    for (size_t i = 0; i < CTX_BUFFER_SIZE; i++) {
+        assert(ctx.main[i] == 0);
+    }
+}
+
+void test_invalid_change_header_04() {
+	printf("\n[test_invalid_change_header_04]\n");
+    size_t marks_count = 8;
+
+    test_ctx ctx = {0};
+
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+    assert(ctx.pvl != NULL);
+    assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
+
+    ctx.write_data[0].expected_length = pvl_header_size;
+    ctx.write_data[0].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[0].return_int = 0;
+
+    ctx.write_data[1].expected_length = pvl_header_size;
+    ctx.write_data[1].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[1].return_int = 0;
+
+    ctx.write_data[2].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.write_data[2].expected_remaining = 0;
+    ctx.write_data[2].return_int = 0;
+
+    // Write and commit some data
+    memset(ctx.main, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.main, 64));
+    assert(!pvl_commit(ctx.pvl));
+
+    assert(ctx.write_pos == 3);
+
+    // Prepare for reading the data
+    ctx.iobuf_pos = 0;
+    memset(ctx.main, 0, CTX_BUFFER_SIZE);
+
+    // Corrupt the header
+    size_t *h_ptr = (size_t *) ctx.iobuf;
+    h_ptr[1] = (CTX_BUFFER_SIZE/2)*(sizeof(size_t[2])+1)+1;
+
+	// Proper read handlers
+    ctx.read_data[0].expected_length = pvl_header_size;
+    ctx.read_data[0].expected_remaining = 0;
+    ctx.read_data[0].return_int = 0;
+
+    ctx.read_data[1].expected_length = 0;
+    ctx.read_data[1].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[1].return_int = 0;
+
+    ctx.read_data[2].expected_length = pvl_header_size;
+    ctx.read_data[2].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[2].return_int = 0;
+
+    ctx.read_data[3].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[3].expected_remaining = 0;
+    ctx.read_data[3].return_int = 0;
+
+    ctx.read_data[4].expected_length = pvl_header_size;
+    ctx.read_data[4].expected_remaining = 0;
+    ctx.read_data[4].return_int = EOF;
+
+    // Create a new pvl to read the data
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+	assert(ctx.pvl != NULL);
+	assert(pvl_set_read_cb(ctx.pvl, &ctx, read_cb) == 0);
+    assert(ctx.read_pos == 1);
+
+    // Verify that no changes have been applied
+    for (size_t i = 0; i < CTX_BUFFER_SIZE; i++) {
+        assert(ctx.main[i] == 0);
+    }
+}
+
+void test_invalid_span_header_01() {
+	printf("\n[test_invalid_span_header_01]\n");
+    size_t marks_count = 8;
+
+    test_ctx ctx = {0};
+
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+    assert(ctx.pvl != NULL);
+    assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
+
+    ctx.write_data[0].expected_length = pvl_header_size;
+    ctx.write_data[0].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[0].return_int = 0;
+
+    ctx.write_data[1].expected_length = pvl_header_size;
+    ctx.write_data[1].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[1].return_int = 0;
+
+    ctx.write_data[2].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.write_data[2].expected_remaining = 0;
+    ctx.write_data[2].return_int = 0;
+
+    // Write and commit some data
+    memset(ctx.main, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.main, 64));
+    assert(!pvl_commit(ctx.pvl));
+
+    assert(ctx.write_pos == 3);
+
+    // Prepare for reading the data
+    ctx.iobuf_pos = 0;
+    memset(ctx.main, 0, CTX_BUFFER_SIZE);
+
+    // Corrupt the header
+    size_t *h_ptr = (size_t *) ctx.iobuf;
+    h_ptr[2] = CTX_BUFFER_SIZE+1;
+
+	// Proper read handlers
+    ctx.read_data[0].expected_length = pvl_header_size;
+    ctx.read_data[0].expected_remaining = 0;
+    ctx.read_data[0].return_int = 0;
+
+    ctx.read_data[1].expected_length = 0;
+    ctx.read_data[1].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[1].return_int = 0;
+
+    ctx.read_data[2].expected_length = pvl_header_size;
+    ctx.read_data[2].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[2].return_int = 0;
+
+    ctx.read_data[3].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[3].expected_remaining = 0;
+    ctx.read_data[3].return_int = 0;
+
+    ctx.read_data[4].expected_length = pvl_header_size;
+    ctx.read_data[4].expected_remaining = 0;
+    ctx.read_data[4].return_int = EOF;
+
+    // Create a new pvl to read the data
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+	assert(ctx.pvl != NULL);
+	assert(pvl_set_read_cb(ctx.pvl, &ctx, read_cb) == 1);
+    assert(ctx.read_pos == 3);
+
+    // Verify that no changes have been applied
+    for (size_t i = 0; i < CTX_BUFFER_SIZE; i++) {
+        assert(ctx.main[i] == 0);
+    }
+}
+
+void test_invalid_span_header_02() {
+	printf("\n[test_invalid_span_header_02]\n");
+    size_t marks_count = 8;
+
+    test_ctx ctx = {0};
+
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+    assert(ctx.pvl != NULL);
+    assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
+
+    ctx.write_data[0].expected_length = pvl_header_size;
+    ctx.write_data[0].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[0].return_int = 0;
+
+    ctx.write_data[1].expected_length = pvl_header_size;
+    ctx.write_data[1].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[1].return_int = 0;
+
+    ctx.write_data[2].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.write_data[2].expected_remaining = 0;
+    ctx.write_data[2].return_int = 0;
+
+    // Write and commit some data
+    memset(ctx.main, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.main, 64));
+    assert(!pvl_commit(ctx.pvl));
+
+    assert(ctx.write_pos == 3);
+
+    // Prepare for reading the data
+    ctx.iobuf_pos = 0;
+    memset(ctx.main, 0, CTX_BUFFER_SIZE);
+
+    // Corrupt the header
+    size_t *h_ptr = (size_t *) ctx.iobuf;
+    h_ptr[3] = CTX_BUFFER_SIZE+1;
+
+	// Proper read handlers
+    ctx.read_data[0].expected_length = pvl_header_size;
+    ctx.read_data[0].expected_remaining = 0;
+    ctx.read_data[0].return_int = 0;
+
+    ctx.read_data[1].expected_length = 0;
+    ctx.read_data[1].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[1].return_int = 0;
+
+    ctx.read_data[2].expected_length = pvl_header_size;
+    ctx.read_data[2].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[2].return_int = 0;
+
+    ctx.read_data[3].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[3].expected_remaining = 0;
+    ctx.read_data[3].return_int = 0;
+
+    ctx.read_data[4].expected_length = pvl_header_size;
+    ctx.read_data[4].expected_remaining = 0;
+    ctx.read_data[4].return_int = EOF;
+
+    // Create a new pvl to read the data
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+	assert(ctx.pvl != NULL);
+	assert(pvl_set_read_cb(ctx.pvl, &ctx, read_cb) == 1);
+    assert(ctx.read_pos == 3);
+
+    // Verify that no changes have been applied
+    for (size_t i = 0; i < CTX_BUFFER_SIZE; i++) {
+        assert(ctx.main[i] == 0);
+    }
+}
+
+void test_invalid_span_header_03() {
+	printf("\n[test_invalid_span_header_03]\n");
+    size_t marks_count = 8;
+
+    test_ctx ctx = {0};
+
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+    assert(ctx.pvl != NULL);
+    assert(pvl_set_write_cb(ctx.pvl, &ctx, write_cb) == 0);
+
+    ctx.write_data[0].expected_length = pvl_header_size;
+    ctx.write_data[0].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[0].return_int = 0;
+
+    ctx.write_data[1].expected_length = pvl_header_size;
+    ctx.write_data[1].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+	ctx.write_data[1].return_int = 0;
+
+    ctx.write_data[2].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.write_data[2].expected_remaining = 0;
+    ctx.write_data[2].return_int = 0;
+
+    // Write and commit some data
+    memset(ctx.main, 1, 64);
+    assert(!pvl_mark(ctx.pvl, ctx.main, 64));
+    assert(!pvl_commit(ctx.pvl));
+
+    assert(ctx.write_pos == 3);
+
+    // Prepare for reading the data
+    ctx.iobuf_pos = 0;
+    memset(ctx.main, 0, CTX_BUFFER_SIZE);
+
+    // Corrupt the header
+    size_t *h_ptr = (size_t *) ctx.iobuf;
+    size_t tmp = h_ptr[2];
+    h_ptr[2] = h_ptr[3];
+    h_ptr[3] = tmp;
+
+	// Proper read handlers
+    ctx.read_data[0].expected_length = pvl_header_size;
+    ctx.read_data[0].expected_remaining = 0;
+    ctx.read_data[0].return_int = 0;
+
+    ctx.read_data[1].expected_length = 0;
+    ctx.read_data[1].expected_remaining = pvl_header_size + (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[1].return_int = 0;
+
+    ctx.read_data[2].expected_length = pvl_header_size;
+    ctx.read_data[2].expected_remaining = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[2].return_int = 0;
+
+    ctx.read_data[3].expected_length = (CTX_BUFFER_SIZE/marks_count);
+    ctx.read_data[3].expected_remaining = 0;
+    ctx.read_data[3].return_int = 0;
+
+    ctx.read_data[4].expected_length = pvl_header_size;
+    ctx.read_data[4].expected_remaining = 0;
+    ctx.read_data[4].return_int = EOF;
+
+    // Create a new pvl to read the data
+    ctx.pvl = pvl_init(ctx.pvl_at, ctx.main, CTX_BUFFER_SIZE, marks_count);
+	assert(ctx.pvl != NULL);
+	assert(pvl_set_read_cb(ctx.pvl, &ctx, read_cb) == 1);
+    assert(ctx.read_pos == 3);
+
+    // Verify that no changes have been applied
+    for (size_t i = 0; i < CTX_BUFFER_SIZE; i++) {
+        assert(ctx.main[i] == 0);
+    }
+}
+
 void test_leak_detected() {
     printf("\n[test_leak_detected]\n");
     size_t marks_count = CTX_BUFFER_SIZE/32;
@@ -1143,6 +1635,15 @@ int main() {
         test_write_failure_01();
         test_write_failure_02();
         test_write_failure_03();
+
+        test_invalid_change_header_01();
+        test_invalid_change_header_02();
+        test_invalid_change_header_03();
+        test_invalid_change_header_04();
+
+        test_invalid_span_header_01();
+        test_invalid_span_header_02();
+        test_invalid_span_header_03();
     }
 
     {
