@@ -122,7 +122,7 @@ int pvl_set_leak_cb(struct pvl *pvl, void *leak_ctx, leak_callback leak_cb);
 /*
  * Mark a span of memory for inclusion in the next commit.
  */
-int pvl_mark(struct pvl *pvl, char *start, size_t length);
+int pvl_mark(struct pvl *pvl, const char *start, size_t length);
 
 /*
  * Persist the marked spans.

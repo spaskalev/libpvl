@@ -14,7 +14,8 @@ test: tests.out
 	! grep -E '^branch\s*[0-9]? never executed$$' *.gcov
 
 tests.out: tests.c libpvl.a
-	cppcheck --error-exitcode=1 tests.c
+	clang-tidy --checks='*' -warnings-as-errors='*' tests.c pvl.c -- -DWARNING_DO_NOT_INCLUDE_PLV_C
+	cppcheck --error-exitcode=1 tests.c pvl.c
 	$(CC) -static $(CFLAGS) tests.c libpvl.a -o tests.out
 
 libpvl.o: pvl.c pvl.h

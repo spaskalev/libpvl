@@ -10,19 +10,20 @@
 #error "Do not include pvl.c. Use the header and link with object code."
 #endif
 
+#include <limits.h>
 #include <stdalign.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
+
 #include "pvl.h"
 
 /* Based on http://c-faq.com/misc/bitsets.html */
-#define BITSET_SIZE(size) ((size + CHAR_BIT - 1) / CHAR_BIT)
+#define BITSET_SIZE(size) (((size) + CHAR_BIT - 1u) / CHAR_BIT)
 #define BITSET_POS(pos) ((pos) / CHAR_BIT)
-#define BITSET_MASK(pos) (1 << ((pos) % CHAR_BIT))
+#define BITSET_MASK(pos) (1u << ((pos) % CHAR_BIT))
 #define BITSET_SET(name, pos) ((name)[BITSET_POS(pos)] |= BITSET_MASK(pos))
 #define BITSET_TEST(name, pos) ((_Bool)((name)[BITSET_POS(pos)] & BITSET_MASK(pos)))
 
@@ -41,7 +42,7 @@ struct pvl {
 	leak_callback *leak_cb;
 	size_t span_length;
 	size_t span_count;
-	char spans[];
+	unsigned char spans[];
 };
 
 struct pvl_span {
@@ -158,7 +159,7 @@ int pvl_set_leak_cb(struct pvl *pvl, void *leak_ctx, leak_callback leak_cb){
 	return 0;
 }
 
-int pvl_mark(struct pvl *pvl, char *start, size_t length) {
+int pvl_mark(struct pvl *pvl, const char *start, size_t length) {
 	if (pvl == NULL) {
 		return 1;
 	}

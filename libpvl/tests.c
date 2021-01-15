@@ -1,9 +1,9 @@
 #include <assert.h>
-#include <stdalign.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <errno.h>
+#include <stdalign.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "pvl.h"
 
@@ -248,7 +248,6 @@ void noop_leak_cb(void *ctx, void *start, size_t length) {
 	(void)(ctx);
 	(void)(start);
 	(void)(length);
-	return;
 }
 
 void test_set_read_cb_null_pvl() {
@@ -423,7 +422,6 @@ void leak_cb(void *ctx, void *start, size_t length) {
     printf(" length: %zu expected: %zu\n", length, fix.expected_length);
     assert(length == fix.expected_length);
     t->leak_pos++;
-    return;
 }
 
 void test_basic_commit() {
