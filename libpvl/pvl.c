@@ -316,6 +316,15 @@ static int pvl_load(struct pvl *pvl) {
 		size_t spans = header[0];
 		size_t content_size = header[1];
 
+		/*
+		 * TODO Validate the header
+		 *
+		 * spans cannot be zero
+		 * content size cannot be zero
+		 * content size cannot be smaller than spans*(sizeof(span header) + 1) ?
+	     * determine upper bound (impl ?)
+		 */
+
 		read_result = pvl->read_cb(pvl->read_ctx, NULL, 0, content_size);
 		if (read_result != 0) {
 			/* The read callback indicated that it cannot serve the remaining bytes
@@ -332,6 +341,13 @@ static int pvl_load(struct pvl *pvl) {
 			if (pvl->read_cb(pvl->read_ctx, &header, sizeof(header), content_size) != 0) {
 				return 1;
 			}
+
+			/*
+			 * TODO Validate the header
+			 *
+			 * start + length must fit within pvl main block
+			 * overflow concerns - a crafted input should not be able to be loaded in the wrong place
+			 */
 
 			/* Read the content */
 			content_size -= header[1];

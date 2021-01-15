@@ -8,7 +8,7 @@ CFLAGS=-DWARNING_DO_NOT_INCLUDE_PLV_C -g -fstrict-aliasing -fstack-protector-all
 
 test: check_coverage check_static
 
-check_coverage:
+check_coverage: tests.out
 	rm -f *.gcda
 	./tests.out
 	llvm-cov-7 gcov -b tests.c | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
