@@ -25,19 +25,19 @@ static size_t bitset_size(size_t elements) {
 }
 
 static void bitset_set(unsigned char *bitset, size_t from_pos, size_t to_pos) {
-	const unsigned char cbits[8] = {0, 2, 6, 14, 30, 62, 126, 254};
+	const unsigned char cbits[8] = {1, 3, 7, 15, 31, 63, 127, 255};
     size_t from_bucket = from_pos / CHAR_BIT;
     size_t from_index = from_pos % CHAR_BIT;
     size_t to_bucket = to_pos / CHAR_BIT;
     size_t to_index = to_pos % CHAR_BIT;
     if (from_bucket == to_bucket) {
-		bitset[from_bucket] |= (cbits[to_index - from_index] + 1u) << from_index;
+		bitset[from_bucket] |= (size_t)(cbits[to_index - from_index]) << from_index;
 	} else {
-		bitset[from_bucket] |= (cbits[7u - from_index] + 1u) << from_index;
+		bitset[from_bucket] |= (size_t)(cbits[7u - from_index]) << from_index;
 		for (size_t i = from_bucket+1; i < to_bucket; i++) {
 			bitset[i] = 255u;
 		}
-		bitset[to_bucket] |= (cbits[to_index] + 1u);
+		bitset[to_bucket] |= cbits[to_index];
 	}
 }
 
