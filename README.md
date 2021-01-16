@@ -5,6 +5,10 @@ Libpvl is a system prevalence library for C. It uses the addressing capabilities
 
 libpvl is licensed under the 0BSD license. See the LICENSE.md file for details.
 
+# Status
+
+![cicd](https://github.com/spaskalev/libpvl/workflows/cicd/badge.svg)
+
 # Design
 
 ## Abstract IO
