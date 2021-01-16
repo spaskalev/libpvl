@@ -119,12 +119,8 @@ int pvl_set_mirror(struct pvl *pvl, char *mirror);
 /* Configure the leak detection handler on a pvl instance. Requires a mirror */
 int pvl_set_leak_cb(struct pvl *pvl, void *leak_ctx, leak_callback leak_cb);
 
-/*
- * Mark a span of memory for inclusion in the next commit.
- */
+/* Mark a span of memory for inclusion in the next commit. */
 int pvl_mark(struct pvl *pvl, const char *start, size_t length);
 
-/*
- * Persist the marked spans.
- */
+/* Persist the marked spans. */
 int pvl_commit(struct pvl *pvl);
