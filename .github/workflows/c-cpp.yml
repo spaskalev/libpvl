@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: setup
-      run: apt-get update && apt-get -y -qq install clang-tidy cppcheck
+      run: sudo apt-get update && sudo apt-get -y -qq install clang-tidy cppcheck
     - name: make
       run: make
       working-directory: ./libpvl
