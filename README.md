@@ -7,7 +7,7 @@ libpvl is licensed under the 0BSD license. See the LICENSE.md file for details.
 
 # Status
 
-![cicd](https://github.com/spaskalev/libpvl/workflows/cicd/badge.svg)
+[![cicd](https://github.com/spaskalev/libpvl/workflows/cicd/badge.svg)](https://github.com/spaskalev/libpvl/actions)
 
 # Design
 
