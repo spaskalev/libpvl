@@ -20,12 +20,9 @@
 
 #include "pvl.h"
 
-/* Based on http://c-faq.com/misc/bitsets.html */
-#define BITSET_SIZE(size) (((size) + CHAR_BIT - 1u) / CHAR_BIT)
-#define BITSET_POS(pos) ((pos) / CHAR_BIT)
-#define BITSET_MASK(pos) (1u << ((pos) % CHAR_BIT))
-#define BITSET_SET(name, pos) ((name)[BITSET_POS(pos)] |= BITSET_MASK(pos))
-#define BITSET_TEST(name, pos) ((_Bool)((name)[BITSET_POS(pos)] & BITSET_MASK(pos)))
+static size_t bitset_size(size_t elements) {
+	return ((elements) + CHAR_BIT - 1u) / CHAR_BIT;
+}
 
 static void bitset_set(unsigned char *bitset, size_t from_pos, size_t to_pos) {
 	const unsigned char cbits[8] = {0, 2, 6, 14, 30, 62, 126, 254};
@@ -42,6 +39,12 @@ static void bitset_set(unsigned char *bitset, size_t from_pos, size_t to_pos) {
 		}
 		bitset[to_bucket] |= (cbits[to_index] + 1u);
 	}
+}
+
+static _Bool bitset_test(const unsigned char *bitset, size_t pos) {
+    size_t bucket = pos / CHAR_BIT;
+    size_t index = pos % CHAR_BIT;
+    return (_Bool)(bitset[bucket] & (1u << index));
 }
 
 struct pvl {
@@ -70,7 +73,7 @@ struct pvl_span {
 };
 
 size_t pvl_sizeof(size_t span_count) {
-	return sizeof(struct pvl)+(BITSET_SIZE(span_count) * sizeof(char));
+	return sizeof(struct pvl)+(bitset_size(span_count) * sizeof(char));
 }
 
 static size_t pvl_next_span(struct pvl *pvl, size_t from, struct pvl_span *span);
@@ -214,12 +217,12 @@ static size_t pvl_next_span(struct pvl *pvl, size_t from, struct pvl_span *span)
 		return 0;
 	}
 
-	span->marked = BITSET_TEST(pvl->spans, from);
+	span->marked = bitset_test(pvl->spans, from);
 	span->index = from * pvl->span_length;
 	span->length = pvl->span_length;
 
 	for (size_t i = from+1; i < pvl->span_count; i++) {
-		if (span->marked ^ BITSET_TEST(pvl->spans, i)) {
+		if (span->marked ^ bitset_test(pvl->spans, i)) {
 			return i;
 		}
 		span->length += pvl->span_length;
@@ -306,7 +309,7 @@ static int pvl_save(struct pvl *pvl) {
 	}
 
 	/* Clear the spans */
-	memset(pvl->spans, 0, (BITSET_SIZE(pvl->span_count) * sizeof(char)));;
+	memset(pvl->spans, 0, (bitset_size(pvl->span_count) * sizeof(char)));;
 	return 0;
 }
 

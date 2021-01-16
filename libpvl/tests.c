@@ -1582,9 +1582,9 @@ void test_bitset() {
 			bitset_set(buf, j, i);
 			for (size_t k = 0; k < bitset_length; k++) {
 				if ((k >= j) && (k <= i)) {
-					assert(BITSET_TEST(buf, k));
+					assert(bitset_test(buf, k));
 				} else {
-					assert(!BITSET_TEST(buf, k));
+					assert(!bitset_test(buf, k));
 				}
 			}
 		}
