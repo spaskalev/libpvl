@@ -51,7 +51,7 @@ Note that the leak detection will not report leaks that occur in a marked intern
 
 ## Tuning performance
 
-To achieve constant time and space complexity for pvl_mark() libpvl splits the main memory block into spans of equal size and uses a bitset to track dirty spans. When pvl_mark() is called it sets the dirty flag for each internal span than overlaps with the caller-provided span. If too few internal spans are used then the space efficiency of the persisted changed can be low. If too many internal spans are used that will increase the size of the pvl object and increase iteration times in pvl_commit().
+To achieve constant space complexity for pvl_mark() libpvl splits the main memory block into spans of equal size and uses a bitset to track dirty spans. When pvl_mark() is called it sets the dirty flag for each internal span than overlaps with the caller-provided span. If too few internal spans are used then the space efficiency of the persisted changed can be low. If too many internal spans are used that will increase the size of the pvl object and increase iteration times in pvl_commit().
 
 # Comparison with other prevalence libraries
 
