@@ -7,6 +7,9 @@
  */
 #pragma once
 
+#include <limits.h>
+#include <stddef.h>
+
 size_t bitset_size(size_t elements) {
 	return ((elements) + CHAR_BIT - 1u) / CHAR_BIT;
 }

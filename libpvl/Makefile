@@ -11,7 +11,8 @@ export SHELL = /bin/bash
 CC=clang
 AR=ar
 CFLAGS=-DWARNING_DO_NOT_INCLUDE_PLV_C -g -fstrict-aliasing -fstack-protector-all -pedantic -Wall -Wextra -Werror -Wfatal-errors --coverage
-LLVM_COV = $(shell compgen -c | grep llvm-cov | sort | head -n 1)
+LLVM_COV=$(shell compgen -c | grep llvm-cov | sort | head -n 1)
+ALL_SRC=$(wildcard *.c *.h)
 
 test: check_coverage check_static
 
@@ -23,8 +24,8 @@ check_coverage: tests.out
 	! grep -E '^branch\s*[0-9]? never executed$$' *.gcov
 
 check_static:
-	clang-tidy --checks='*' -warnings-as-errors='*' tests.c pvl.c -- -DWARNING_DO_NOT_INCLUDE_PLV_C
-	cppcheck --error-exitcode=1 tests.c pvl.c
+	clang-tidy --checks='*,-llvm-header-guard,-llvm-include-order' -warnings-as-errors='*' $(ALL_SRC) -- -DWARNING_DO_NOT_INCLUDE_PLV_C
+	cppcheck --error-exitcode=1 $(ALL_SRC)
 
 tests.out: tests.c libpvl.a
 	$(CC) -static $(CFLAGS) tests.c libpvl.a -o tests.out
