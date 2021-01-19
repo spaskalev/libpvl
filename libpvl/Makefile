@@ -2,16 +2,19 @@ MAKEFLAGS += --no-builtin-rules
 
 .SUFFIXES:
 
+export SHELL = /bin/bash
+
 CC=clang
 AR=ar
 CFLAGS=-DWARNING_DO_NOT_INCLUDE_PLV_C -g -fstrict-aliasing -fstack-protector-all -pedantic -Wall -Wextra -Werror -Wfatal-errors --coverage
+LLVM_COV = $(shell compgen -c | grep llvm-cov | sort | head -n 1)
 
 test: check_coverage check_static
 
 check_coverage: tests.out
 	rm -f *.gcda
 	./tests.out
-	llvm-cov-7 gcov -b tests.c | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
+	$(LLVM_COV) gcov -b tests.c | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
 	! grep  '#####:' *.gcov
 	! grep -E '^branch\s*[0-9]? never executed$$' *.gcov
 
