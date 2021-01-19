@@ -1,4 +1,4 @@
-Copyright (C) 2020 by Stanislav Paskalev <spaskalev@protonmail.com>
+Copyright (C) 2020-2021 by Stanislav Paskalev <spaskalev@protonmail.com>
 
 Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
 

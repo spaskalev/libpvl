@@ -1,3 +1,7 @@
+/*
+ * Copyright 2020-2021 Stanislav Paskalev <spaskalev@protonmail.com>
+ */
+
 #include <assert.h>
 #include <errno.h>
 #include <stdalign.h>
