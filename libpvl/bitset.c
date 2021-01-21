@@ -15,7 +15,7 @@ size_t bitset_size(size_t elements) {
 	return ((elements) + CHAR_BIT - 1u) / CHAR_BIT;
 }
 
-void bitset_set(unsigned char *bitset, size_t from_pos, size_t to_pos) {
+void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
 	const unsigned char cbits[8] = {1, 3, 7, 15, 31, 63, 127, 255};
     size_t from_bucket = from_pos / CHAR_BIT;
     size_t from_index = from_pos % CHAR_BIT;
@@ -29,6 +29,26 @@ void bitset_set(unsigned char *bitset, size_t from_pos, size_t to_pos) {
 			bitset[i] = 255u;
 		}
 		bitset[to_bucket] |= cbits[to_index];
+	}
+}
+
+void bitset_set(unsigned char *bitset, size_t pos) {
+    size_t bucket = pos / CHAR_BIT;
+    size_t index = pos % CHAR_BIT;
+    bitset[bucket] |= (1u << index);
+}
+
+void bitset_clear(unsigned char *bitset, size_t pos) {
+    size_t bucket = pos / CHAR_BIT;
+    size_t index = pos % CHAR_BIT;
+    bitset[bucket] &= ~(1u << index);
+}
+
+void bitset_flip(unsigned char *bitset, size_t pos) {
+	if (bitset_test(bitset, pos)) {
+		bitset_clear(bitset, pos);
+	} else {
+		bitset_set(bitset, pos);
 	}
 }
 

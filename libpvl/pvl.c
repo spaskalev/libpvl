@@ -167,7 +167,7 @@ int pvl_mark(struct pvl *pvl, const char *start, size_t length) {
 	/* Set the matching spans */
 	size_t from_pos = (start - pvl->main) / pvl->span_length;
 	size_t to_pos = ((start+length) - pvl->main) / pvl->span_length;
-	bitset_set(pvl->spans, from_pos, to_pos);
+	bitset_set_range(pvl->spans, from_pos, to_pos);
 
 	return 0;
 }

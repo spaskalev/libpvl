@@ -1583,7 +1583,7 @@ void test_bitset() {
 	for (size_t i = 0; i < bitset_length; i++) {
 		for (size_t j = 0; j <= i; j++) {
 			memset(buf, 0, 4);
-			bitset_set(buf, j, i);
+			bitset_set_range(buf, j, i);
 			for (size_t k = 0; k < bitset_length; k++) {
 				if ((k >= j) && (k <= i)) {
 					assert(bitset_test(buf, k));

@@ -27,8 +27,8 @@ check_static:
 	clang-tidy --checks='*,-llvm-header-guard,-llvm-include-order' -warnings-as-errors='*' $(ALL_SRC) -- -DWARNING_DO_NOT_INCLUDE_PLV_C
 	cppcheck --error-exitcode=1 $(ALL_SRC)
 
-tests.out: tests.c libpvl.a bitset.a
-	$(CC) -static $(CFLAGS) tests.c libpvl.a bitset.a -o tests.out
+tests.out: tests.c libpvl.a bitset.a bbt.a
+	$(CC) -static $(CFLAGS) tests.c libpvl.a bitset.a bbt.a -o tests.out
 
 libpvl.o: pvl.c pvl.h
 	$(CC) $(CFLAGS) -c pvl.c -o $@
@@ -41,6 +41,12 @@ bitset.o: bitset.h bitset.c
 
 bitset.a: bitset.o
 	$(AR) rcs $@ bitset.o
+
+bbt.o: bbt.h bbt.c
+	$(CC) $(CFLAGS) -c bbt.c -o $@
+
+bbt.a: bbt.o
+	$(AR) rcs $@ bbt.o
 
 clean:
 	rm -f *.a *.o *.gcda *.gcno *.gcov tests.out
