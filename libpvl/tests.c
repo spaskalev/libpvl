@@ -12,8 +12,10 @@
 #include "pvl.h"
 
 #define pvl_header_size (2*sizeof(size_t))
+#define start_test printf("Running test: %s in %s:%d\n", __func__, __FILE__, __LINE__);
 
 void test_init_misalignment() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)+1];
     char main_mem[1024];
     // Ensure wrong alignment (max_align_t+1)
@@ -22,6 +24,7 @@ void test_init_misalignment() {
 }
 
 void test_init_alignment() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char main_mem[1024];
     struct pvl *pvl = pvl_init(pvlbuf, main_mem, 1024, 1);
@@ -29,6 +32,7 @@ void test_init_alignment() {
 }
 
 void test_init_zero_marks() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(0)];
     char main_mem[1024];
     struct pvl *pvl = pvl_init(pvlbuf, main_mem, 1024, 0);
@@ -36,12 +40,14 @@ void test_init_zero_marks() {
 }
 
 void test_init_null_main() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     struct pvl *pvl = pvl_init(pvlbuf, NULL, 1024, 1);
     assert(pvl == NULL);
 }
 
 void test_init_non_null_main() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char main_mem[1024];
     struct pvl *pvl = pvl_init(pvlbuf, main_mem, 1024, 1);
@@ -49,6 +55,7 @@ void test_init_non_null_main() {
 }
 
 void test_init_zero_length() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char main_mem[1024];
     struct pvl *pvl = pvl_init(pvlbuf, main_mem, 0, 1);
@@ -56,6 +63,7 @@ void test_init_zero_length() {
 }
 
 void test_init_non_zero_length() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char main_mem[1024];
     struct pvl *pvl = pvl_init(pvlbuf, main_mem, 1024, 1);
@@ -63,6 +71,7 @@ void test_init_non_zero_length() {
 }
 
 void test_init_non_divisible_spans() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char main_mem[1024];
     struct pvl *pvl = pvl_init(pvlbuf, main_mem, 1024, 3);
@@ -70,6 +79,7 @@ void test_init_non_divisible_spans() {
 }
 
 void test_init_main_mirror_overlap() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 512, 1);
@@ -78,6 +88,7 @@ void test_init_main_mirror_overlap() {
 }
 
 void test_init_main_mirror_no_overlap() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 512, 1);
@@ -86,6 +97,7 @@ void test_init_main_mirror_no_overlap() {
 }
 
 void test_init_mirror_main_overlap() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer+256, 512, 1);
@@ -94,6 +106,7 @@ void test_init_mirror_main_overlap() {
 }
 
 void test_init_mirror_main_no_overlap() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer+512, 512, 1);
@@ -102,6 +115,7 @@ void test_init_mirror_main_no_overlap() {
 }
 
 void test_mark_pvl_null() {
+	start_test;
     struct pvl *pvl = NULL;
     int data = 0;
     // pass some garbage
@@ -109,6 +123,7 @@ void test_mark_pvl_null() {
 }
 
 void test_mark_mark_null() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
@@ -116,6 +131,7 @@ void test_mark_mark_null() {
 }
 
 void test_mark_zero_length() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
@@ -123,6 +139,7 @@ void test_mark_zero_length() {
 }
 
 void test_mark_before_main() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer+512, 512, 1);
@@ -130,6 +147,7 @@ void test_mark_before_main() {
 }
 
 void test_mark_mark_main_overlap() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer+512, 512, 1);
@@ -137,6 +155,7 @@ void test_mark_mark_main_overlap() {
 }
 
 void test_mark_main_mark_overlap() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 512, 1);
@@ -144,6 +163,7 @@ void test_mark_main_mark_overlap() {
 }
 
 void test_mark_after_main() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 512, 1);
@@ -151,6 +171,7 @@ void test_mark_after_main() {
 }
 
 void test_mark_start_of_main() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
@@ -158,6 +179,7 @@ void test_mark_start_of_main() {
 }
 
 void test_mark_middle_of_main() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
@@ -165,6 +187,7 @@ void test_mark_middle_of_main() {
 }
 
 void test_mark_end_of_main() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
@@ -172,6 +195,7 @@ void test_mark_end_of_main() {
 }
 
 void test_mark_all_of_main() {
+	start_test;
     int marks = 8;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(marks)];
     char buffer[1024];
@@ -180,6 +204,7 @@ void test_mark_all_of_main() {
 }
 
 void test_mark_extra_marks() {
+	start_test;
     int marks = 2;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(marks)];
     char buffer[1024];
@@ -190,12 +215,14 @@ void test_mark_extra_marks() {
 }
 
 void test_commit_pvl_null() {
+	start_test;
     struct pvl *pvl = NULL;
     // pass some garbage
     assert(pvl_commit(pvl));
 }
 
 void test_commit_no_mark() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
@@ -203,6 +230,7 @@ void test_commit_no_mark() {
 }
 
 void test_commit_single_mark() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
@@ -211,6 +239,7 @@ void test_commit_single_mark() {
 }
 
 void test_commit_max_marks() {
+	start_test;
     size_t marks = 8;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(marks)];
     char buffer[1024];
@@ -222,6 +251,7 @@ void test_commit_max_marks() {
 }
 
 void test_commit_over_max_marks() {
+	start_test;
     size_t marks = 8;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(marks)];
     char buffer[1024];
@@ -255,27 +285,32 @@ void noop_leak_cb(void *ctx, void *start, size_t length) {
 }
 
 void test_set_read_cb_null_pvl() {
+	start_test;
 	struct pvl *pvl = NULL;
 	assert(pvl_set_read_cb(pvl, NULL, noop_read_cb) != 0);
 }
 
 void test_set_write_cb_null_pvl() {
+	start_test;
 	struct pvl *pvl = NULL;
 	assert(pvl_set_write_cb(pvl, NULL, noop_write_cb) != 0);
 }
 
 void test_set_mirror_null_pvl() {
+	start_test;
     struct pvl *pvl = NULL;
     char mirror[1024];
     assert(pvl_set_mirror(pvl, mirror) != 0);
 }
 
 void test_set_leak_cb_null_pvl() {
+	start_test;
 	struct pvl *pvl = NULL;
 	assert(pvl_set_leak_cb(pvl, NULL, noop_leak_cb) != 0);
 }
 
 void test_set_read_cb_twice() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
@@ -284,6 +319,7 @@ void test_set_read_cb_twice() {
 }
 
 void test_set_write_cb_twice() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
@@ -294,6 +330,7 @@ void test_set_write_cb_twice() {
 }
 
 void test_set_mirror_twice() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     char mirror[1024];
@@ -303,6 +340,7 @@ void test_set_mirror_twice() {
 }
 
 void test_set_leak_cb_twice() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     char mirror[1024];
@@ -315,6 +353,7 @@ void test_set_leak_cb_twice() {
 }
 
 void test_init_leak_no_mirror() {
+	start_test;
     alignas(max_align_t) char pvlbuf[pvl_sizeof(1)];
     char buffer[1024];
     struct pvl *pvl = pvl_init(pvlbuf, buffer, 1024, 1);
@@ -379,12 +418,12 @@ typedef struct {
 int read_cb(void *ctx, void *to, size_t length, size_t remaining) {
     test_ctx *t = (test_ctx*) ctx;
 
-    printf("\n [read callback] [%d] \n", t->read_pos);
+    /* printf("\n [read callback] [%d] \n", t->read_pos); */
     read_mock fix = t->read_data[t->read_pos];
 
-    printf("   length: %zu expected: %zu\n", length, fix.expected_length);
+    /* printf("   length: %zu expected: %zu\n", length, fix.expected_length); */
     assert(length == fix.expected_length);
-    printf("remaining: %zu expected: %zu\n", remaining, fix.expected_remaining);
+    /* printf("remaining: %zu expected: %zu\n", remaining, fix.expected_remaining); */
     assert(remaining == fix.expected_remaining);
 
     if (to && length) {
@@ -399,13 +438,13 @@ int read_cb(void *ctx, void *to, size_t length, size_t remaining) {
 int write_cb(void *ctx, void *from, size_t length, size_t remaining) {
     test_ctx *t = (test_ctx*) ctx;
 
-    printf("\n [write callback] [%d] \n", t->write_pos);
+    /* printf("\n [write callback] [%d] \n", t->write_pos); */
     write_mock fix = t->write_data[t->write_pos];
 
-    printf("   length: %zu expected: %zu\n", length, fix.expected_length);
+    /* printf("   length: %zu expected: %zu\n", length, fix.expected_length); */
     assert(length == fix.expected_length);
 
-    printf("remaining: %zu expected: %zu\n", remaining, fix.expected_remaining);
+    /* printf("remaining: %zu expected: %zu\n", remaining, fix.expected_remaining); */
     assert(remaining == fix.expected_remaining);
 
     memcpy(t->iobuf+t->iobuf_pos, from, length);
@@ -418,18 +457,18 @@ int write_cb(void *ctx, void *from, size_t length, size_t remaining) {
 void leak_cb(void *ctx, void *start, size_t length) {
     test_ctx *t = (test_ctx*) ctx;
 
-    printf("\n    [leak] [%d] \n", t->leak_pos);
+    /* printf("\n    [leak] [%d] \n", t->leak_pos); */
     leak_mock fix = t->leak_data[t->leak_pos];
 
-    printf("  start: %p expected: %p\n", start, fix.expected_start);
+    /* printf("  start: %p expected: %p\n", start, fix.expected_start); */
     assert(start == fix.expected_start);
-    printf(" length: %zu expected: %zu\n", length, fix.expected_length);
+    /* printf(" length: %zu expected: %zu\n", length, fix.expected_length); */
     assert(length == fix.expected_length);
     t->leak_pos++;
 }
 
 void test_basic_commit() {
-    printf("\n[test_basic_commit]\n");
+    start_test;
     size_t marks_count = 8;
 
     test_ctx ctx = {0};
@@ -533,7 +572,7 @@ void test_basic_commit() {
 }
 
 void test_basic_commit_mirror() {
-    printf("\n[test_basic_commit_mirror]\n");
+    start_test;
     size_t marks_count = 8;
 
     test_ctx ctx = {0};
@@ -641,7 +680,7 @@ void test_basic_commit_mirror() {
 }
 
 void test_read_failure_01() {
-    printf("\n[test_read_failure_01]\n");
+    start_test;
     size_t marks_count = 8;
 
     test_ctx ctx = {0};
@@ -712,7 +751,7 @@ void test_read_failure_01() {
 }
 
 void test_read_failure_02() {
-    printf("\n[test_read_failure_02]\n");
+    start_test;
     size_t marks_count = 8;
 
     test_ctx ctx = {0};
@@ -787,7 +826,7 @@ void test_read_failure_02() {
 }
 
 void test_read_partial_failure_01() {
-    printf("\n[test_read_partial_failure_01]\n");
+    start_test;
     size_t marks_count = 8;
 
     test_ctx ctx = {0};
@@ -850,7 +889,7 @@ void test_read_partial_failure_01() {
 }
 
 void test_read_partial_failure_02() {
-    printf("\n[test_read_partial_failure_02]\n");
+    start_test;
     size_t marks_count = 8;
 
     test_ctx ctx = {0};
@@ -917,7 +956,7 @@ void test_read_partial_failure_02() {
 }
 
 void test_write_no_marks() {
-    printf("\n[test_write_no_marks]\n");
+    start_test;
     size_t marks_count = CTX_BUFFER_SIZE/32;
 
     test_ctx ctx = {0};
@@ -933,7 +972,7 @@ void test_write_no_marks() {
 }
 
 void test_write_failure_01() {
-    printf("\n[test_write_failure_01]\n");
+    start_test;
     size_t marks_count = CTX_BUFFER_SIZE/32;
 
     test_ctx ctx = {0};
@@ -956,7 +995,7 @@ void test_write_failure_01() {
 }
 
 void test_write_failure_02() {
-    printf("\n[test_write_failure_02]\n");
+    start_test;
     size_t marks_count = CTX_BUFFER_SIZE/32;
 
     test_ctx ctx = {0};
@@ -983,7 +1022,7 @@ void test_write_failure_02() {
 }
 
 void test_write_failure_03() {
-    printf("\n[test_write_failure_03]\n");
+    start_test;
     size_t marks_count = CTX_BUFFER_SIZE/32;
 
     test_ctx ctx = {0};
@@ -1014,7 +1053,7 @@ void test_write_failure_03() {
 }
 
 void test_invalid_change_header_01() {
-	printf("\n[test_invalid_change_header_01]\n");
+	start_test;
     size_t marks_count = 8;
 
     test_ctx ctx = {0};
@@ -1084,7 +1123,7 @@ void test_invalid_change_header_01() {
 }
 
 void test_invalid_change_header_02() {
-	printf("\n[test_invalid_change_header_02]\n");
+	start_test;
     size_t marks_count = 8;
 
     test_ctx ctx = {0};
@@ -1154,7 +1193,7 @@ void test_invalid_change_header_02() {
 }
 
 void test_invalid_change_header_03() {
-	printf("\n[test_invalid_change_header_03]\n");
+	start_test;
     size_t marks_count = 8;
 
     test_ctx ctx = {0};
@@ -1224,7 +1263,7 @@ void test_invalid_change_header_03() {
 }
 
 void test_invalid_change_header_04() {
-	printf("\n[test_invalid_change_header_04]\n");
+	start_test;
     size_t marks_count = 8;
 
     test_ctx ctx = {0};
@@ -1294,7 +1333,7 @@ void test_invalid_change_header_04() {
 }
 
 void test_invalid_span_header_01() {
-	printf("\n[test_invalid_span_header_01]\n");
+	start_test;
     size_t marks_count = 8;
 
     test_ctx ctx = {0};
@@ -1364,7 +1403,7 @@ void test_invalid_span_header_01() {
 }
 
 void test_invalid_span_header_02() {
-	printf("\n[test_invalid_span_header_02]\n");
+	start_test;
     size_t marks_count = 8;
 
     test_ctx ctx = {0};
@@ -1434,7 +1473,7 @@ void test_invalid_span_header_02() {
 }
 
 void test_invalid_span_header_03() {
-	printf("\n[test_invalid_span_header_03]\n");
+	start_test;
     size_t marks_count = 8;
 
     test_ctx ctx = {0};
@@ -1506,7 +1545,7 @@ void test_invalid_span_header_03() {
 }
 
 void test_leak_detected() {
-    printf("\n[test_leak_detected]\n");
+    start_test;
     size_t marks_count = CTX_BUFFER_SIZE/32;
 
     test_ctx ctx = {0};
@@ -1542,7 +1581,7 @@ void test_leak_detected() {
 }
 
 void test_leak_no_leak() {
-    printf("\n[test_leak_no_leak]\n");
+    start_test;
     size_t marks_count = CTX_BUFFER_SIZE/32;
 
     test_ctx ctx = {0};
@@ -1578,6 +1617,7 @@ void test_leak_no_leak() {
 }
 
 void test_bitset() {
+	start_test;
 	unsigned char buf[4] = {0};
 	size_t bitset_length = 32;
 	for (size_t i = 0; i < bitset_length; i++) {

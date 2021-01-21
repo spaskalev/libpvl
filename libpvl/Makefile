@@ -22,10 +22,12 @@ check_coverage: tests.out
 	$(LLVM_COV) gcov -b tests.c | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
 	! grep  '#####:' *.gcov
 	! grep -E '^branch\s*[0-9]? never executed$$' *.gcov
+	@echo -e "\nCode coverage check passed successfully\n"
 
 check_static:
-	clang-tidy --checks='*,-llvm-header-guard,-llvm-include-order' -warnings-as-errors='*' $(ALL_SRC) -- -DWARNING_DO_NOT_INCLUDE_PLV_C
-	cppcheck --error-exitcode=1 $(ALL_SRC)
+	clang-tidy -checks='*,-llvm-header-guard,-llvm-include-order' -warnings-as-errors='*' $(ALL_SRC) -- -DWARNING_DO_NOT_INCLUDE_PLV_C
+	cppcheck --error-exitcode=1 --quiet $(ALL_SRC)
+	@echo -e "\nStatic checks passed successfully\n"
 
 tests.out: tests.c libpvl.a bitset.a bbt.a
 	$(CC) -static $(CFLAGS) tests.c libpvl.a bitset.a bbt.a -o tests.out
