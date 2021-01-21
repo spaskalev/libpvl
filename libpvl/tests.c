@@ -1649,6 +1649,14 @@ void test_bitset_range() {
 	}
 }
 
+void test_bbt_init_misalignment() {
+	start_test;
+    alignas(max_align_t) char buf[bool_binary_tree_sizeof(1)+1];
+    // Ensure wrong alignment (max_align_t+1)
+    struct bool_binary_tree *bbt = bool_binary_tree_init(buf+1, 1);
+    assert (bbt == NULL);
+}
+
 void test_bbt_sizeof_invalid_order() {
 	start_test;
 	assert(bool_binary_tree_sizeof(0) == SIZE_MAX);
@@ -1698,6 +1706,42 @@ void test_bbt_basic() {
 	assert(depth(pos) == 1);
 	assert(parent(pos) == 1);
 	assert(depth(pos) == 0);
+
+	set(pos);
+	assert(test(pos) == 1);
+	clear(pos);
+	assert(test(pos) == 0);
+	flip(pos);
+	assert(test(pos) == 1);
+	flip(pos);
+	assert(test(pos) == 0);
+
+	at_depth(bbt, 0, pos);
+	assert(left_child(pos) == 1);
+	assert(left_child(pos) == 1);
+	assert(left_child(pos) == 0);
+	assert(left_adjacent(pos) == 0);
+
+	at_depth(bbt, 0, pos);
+	assert(right_child(pos) == 1);
+	assert(right_child(pos) == 1);
+	assert(right_child(pos) == 0);
+	assert(right_adjacent(pos) == 0);
+
+	at_depth(bbt, 0, pos);
+	assert(right_child(pos) == 1);
+	assert(right_adjacent(pos) == 0);
+
+	at_depth(bbt, 0, pos);
+	assert(parent(pos) == 0);
+
+	at_depth(bbt, 0, pos);
+	at_depth(bbt, 3, pos);
+	assert(depth(pos) == 0);
+
+	at_depth(bbt, 0, pos);
+	assert(left_adjacent(pos) == 0);
+	assert(right_adjacent(pos) == 0);
 }
 
 int main() {
@@ -1784,6 +1828,8 @@ int main() {
 	}
 
 	{
+		test_bbt_init_misalignment();
+
 		test_bbt_sizeof_invalid_order();
 		test_bbt_init_invalid_order();
 

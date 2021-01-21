@@ -58,6 +58,9 @@ struct bool_binary_tree *bool_binary_tree_init(char *at, unsigned char order) {
 }
 
 void at_depth(struct bool_binary_tree *t, size_t depth, struct bool_binary_tree_pos *pos) {
+	if (depth >= t->order) {
+		return;
+	}
 	pos->t = t;
 	pos->pos = 1;
 	while (depth && left_child(pos)) {
@@ -66,21 +69,19 @@ void at_depth(struct bool_binary_tree *t, size_t depth, struct bool_binary_tree_
 }
 
 _Bool left_child(struct bool_binary_tree_pos *pos) {
-	size_t left = 2 * pos->pos;
-	if (left <= pos->t->elements_count) {
-		pos->pos = left;
-		return 1;
+	if (depth(pos) + 1 == pos->t->order) {
+		return 0;
 	}
-	return 0;
+	pos->pos = 2 * pos->pos;
+	return 1;
 }
 
 _Bool right_child(struct bool_binary_tree_pos *pos) {
-	size_t right = (2 * pos->pos) + 1;
-	if (right <= pos->t->elements_count) {
-		pos->pos = right;
-		return 1;
+	if (depth(pos) + 1 == pos->t->order) {
+		return 0;
 	}
-	return 0;
+	pos->pos = (2 * pos->pos) + 1;
+	return 1;
 }
 
 _Bool left_adjacent(struct bool_binary_tree_pos *pos) {
@@ -95,7 +96,10 @@ _Bool left_adjacent(struct bool_binary_tree_pos *pos) {
 }
 
 _Bool right_adjacent(struct bool_binary_tree_pos *pos) {
-	if (pos->pos == pos->t->elements_count) {
+	if (pos->pos <= 1) {
+		return 0;
+	}
+	if (pos->pos == pos->t->elements_count - 1) {
 		return 0;
 	}
 	if (highest_bit_set(pos->pos) != highest_bit_set(pos->pos + 1)) {
@@ -107,7 +111,7 @@ _Bool right_adjacent(struct bool_binary_tree_pos *pos) {
 
 _Bool parent(struct bool_binary_tree_pos *pos) {
 	size_t parent = pos->pos / 2;
-	if (parent != pos->pos) {
+	if ((parent != pos->pos) && parent != 0) {
 		pos->pos = parent;
 		return 1;
 	}

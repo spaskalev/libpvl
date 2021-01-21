@@ -19,7 +19,7 @@ test: check_coverage check_static
 check_coverage: tests.out
 	rm -f *.gcda
 	./tests.out
-	$(LLVM_COV) gcov -b tests.c | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
+	$(LLVM_COV) gcov -b $(ALL_SRC) | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
 	! grep  '#####:' *.gcov
 	! grep -E '^branch\s*[0-9]? never executed$$' *.gcov
 	@echo -e "\nCode coverage check passed successfully\n"
