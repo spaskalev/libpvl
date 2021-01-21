@@ -42,7 +42,7 @@ size_t bbt_pos_sizeof() {
 	return sizeof(struct bbt_pos);
 }
 
-struct bbt *bbt_init(char *at, unsigned char order) {
+struct bbt *bbt_init(unsigned char *at, unsigned char order) {
 	size_t alignment = ((uintptr_t) at) % alignof(max_align_t);
 	if (alignment != 0) {
 		return NULL;

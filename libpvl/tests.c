@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bbm.h"
 #include "bbt.h"
 
 #include "pvl.h"
@@ -1651,7 +1652,7 @@ void test_bitset_range() {
 
 void test_bbt_init_misalignment() {
 	start_test;
-    alignas(max_align_t) char buf[bbt_sizeof(1)+1];
+    alignas(max_align_t) unsigned char buf[bbt_sizeof(1)+1];
     // Ensure wrong alignment (max_align_t+1)
     struct bbt *bbt = bbt_init(buf+1, 1);
     assert (bbt == NULL);
@@ -1665,7 +1666,7 @@ void test_bbt_sizeof_invalid_order() {
 
 void test_bbt_init_invalid_order() {
 	start_test;
-	alignas(max_align_t) char buf[1024];
+	alignas(max_align_t) unsigned char buf[1024];
 	assert(bbt_init(buf, 0) == NULL);
 	assert(bbt_init(buf, sizeof(size_t) * CHAR_BIT) == NULL);
 }
@@ -1673,10 +1674,10 @@ void test_bbt_init_invalid_order() {
 void test_bbt_basic() {
 	start_test;
 	size_t bbt_order = 3;
-	alignas(max_align_t) char buf[bbt_sizeof(bbt_order)];
+	alignas(max_align_t) unsigned char buf[bbt_sizeof(bbt_order)];
 	struct bbt *bbt = bbt_init(buf, bbt_order);
 	assert(bbt != NULL);
-	alignas(max_align_t) char pos_buf[bbt_pos_sizeof()];
+	alignas(max_align_t) unsigned char pos_buf[bbt_pos_sizeof()];
 	struct bbt_pos *pos = (struct bbt_pos *) pos_buf;
 	for (size_t i = 0; i < 3; i++) {
 		bbt_pos_at_depth(bbt, i, pos);
