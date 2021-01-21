@@ -29,8 +29,8 @@ check_static:
 	cppcheck --error-exitcode=1 --quiet $(ALL_SRC)
 	@echo -e "\nStatic checks passed successfully\n"
 
-tests.out: tests.c libpvl.a bitset.a bbt.a
-	$(CC) -static $(CFLAGS) tests.c libpvl.a bitset.a bbt.a -o tests.out
+tests.out: tests.c libpvl.a bitset.a bbt.a bbm.a
+	$(CC) -static $(CFLAGS) tests.c libpvl.a bitset.a bbt.a bbm.a -o tests.out
 
 libpvl.o: pvl.c pvl.h
 	$(CC) $(CFLAGS) -c pvl.c -o $@
@@ -49,6 +49,12 @@ bbt.o: bbt.h bbt.c
 
 bbt.a: bbt.o
 	$(AR) rcs $@ bbt.o
+
+bbm.o: bbm.h bbm.c
+	$(CC) $(CFLAGS) -c bbm.c -o $@
+
+bbm.a: bbm.o
+	$(AR) rcs $@ bbm.o
 
 clean:
 	rm -f *.a *.o *.gcda *.gcno *.gcov tests.out
