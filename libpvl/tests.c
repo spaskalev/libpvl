@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bbt.h"
+
 #include "pvl.h"
 
 #define pvl_header_size (2*sizeof(size_t))
@@ -1616,7 +1618,19 @@ void test_leak_no_leak() {
     assert(ctx.leak_pos == 0);
 }
 
-void test_bitset() {
+void test_bitset_basic() {
+	start_test;
+	unsigned char buf[4] = {0};
+	assert(bitset_test(buf, 0) == 0);
+	bitset_set(buf, 0);
+	assert(bitset_test(buf, 0) == 1);
+	bitset_flip(buf, 0);
+	assert(bitset_test(buf, 0) == 0);
+	bitset_flip(buf, 0);
+	assert(bitset_test(buf, 0) == 1);
+}
+
+void test_bitset_range() {
 	start_test;
 	unsigned char buf[4] = {0};
 	size_t bitset_length = 32;
@@ -1633,6 +1647,57 @@ void test_bitset() {
 			}
 		}
 	}
+}
+
+void test_bbt_sizeof_invalid_order() {
+	start_test;
+	assert(bool_binary_tree_sizeof(0) == SIZE_MAX);
+	assert(bool_binary_tree_sizeof(sizeof(size_t) * CHAR_BIT) == SIZE_MAX);
+}
+
+void test_bbt_init_invalid_order() {
+	start_test;
+	alignas(max_align_t) char buf[1024];
+	assert(bool_binary_tree_init(buf, 0) == NULL);
+	assert(bool_binary_tree_init(buf, sizeof(size_t) * CHAR_BIT) == NULL);
+}
+
+void test_bbt_basic() {
+	start_test;
+	size_t bbt_order = 3;
+	alignas(max_align_t) char buf[bool_binary_tree_sizeof(bbt_order)];
+	struct bool_binary_tree *bbt = bool_binary_tree_init(buf, bbt_order);
+	assert(bbt != NULL);
+	alignas(max_align_t) char pos_buf[bool_binary_tree_pos_sizeof()];
+	struct bool_binary_tree_pos *pos = (struct bool_binary_tree_pos *) pos_buf;
+	for (size_t i = 0; i < 3; i++) {
+		at_depth(bbt, i, pos);
+		assert (pos != NULL);
+		assert (depth(pos) == i);
+	}
+	at_depth(bbt, 0, pos);
+
+	assert(left_child(pos) == 1);
+	assert(depth(pos) == 1);
+	assert(parent(pos) == 1);
+	assert(depth(pos) == 0);
+
+	assert(right_child(pos) == 1);
+	assert(depth(pos) == 1);
+	assert(parent(pos) == 1);
+	assert(depth(pos) == 0);
+
+	assert(left_child(pos) == 1);
+	assert(right_adjacent(pos) == 1);
+	assert(depth(pos) == 1);
+	assert(parent(pos) == 1);
+	assert(depth(pos) == 0);
+
+	assert(right_child(pos) == 1);
+	assert(left_adjacent(pos) == 1);
+	assert(depth(pos) == 1);
+	assert(parent(pos) == 1);
+	assert(depth(pos) == 0);
 }
 
 int main() {
@@ -1714,6 +1779,14 @@ int main() {
     }
 
     {
-		test_bitset();
+		test_bitset_basic();
+		test_bitset_range();
+	}
+
+	{
+		test_bbt_sizeof_invalid_order();
+		test_bbt_init_invalid_order();
+
+		test_bbt_basic();
 	}
 }

@@ -14,11 +14,14 @@ struct bool_binary_tree_pos;
 /* Returns the sizeof of a bbt of the desired order. Keep order small. */
 size_t bool_binary_tree_sizeof(unsigned char order);
 
+/* Returns the sizeof of the position handle */
+size_t bool_binary_tree_pos_sizeof();
+
 /* Initializes a boolean binary tree at the specified location. Keep order small. */
 struct bool_binary_tree *bool_binary_tree_init(char *at, unsigned char order);
 
 /* Sets a position at the specified depth */
-void *at_depth(struct bool_binary_tree *t, size_t depth, struct bool_binary_tree_pos *pos);
+void at_depth(struct bool_binary_tree *t, size_t depth, struct bool_binary_tree_pos *pos);
 
 /* Navigates to the left child node. Returns false if this is a leaf node. */
 _Bool left_child(struct bool_binary_tree_pos *pos);

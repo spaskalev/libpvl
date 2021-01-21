@@ -27,7 +27,7 @@ struct bool_binary_tree_pos {
 static size_t highest_bit_set(size_t value);
 
 size_t bool_binary_tree_sizeof(unsigned char order) {
-	if (order > (sizeof(size_t) * CHAR_BIT)) {
+	if ((order == 0) || (order >= (sizeof(size_t) * CHAR_BIT))) {
 		/* return something wild to detect failure
 		 * the init function will also check this
 		 * and fail to initialize */
@@ -38,12 +38,16 @@ size_t bool_binary_tree_sizeof(unsigned char order) {
 	return result;
 }
 
+size_t bool_binary_tree_pos_sizeof() {
+	return sizeof(struct bool_binary_tree_pos);
+}
+
 struct bool_binary_tree *bool_binary_tree_init(char *at, unsigned char order) {
 	size_t alignment = ((uintptr_t) at) % alignof(max_align_t);
 	if (alignment != 0) {
 		return NULL;
 	}
-	if (order > (sizeof(size_t) * CHAR_BIT)) {
+	if ((order == 0) || (order >= (sizeof(size_t) * CHAR_BIT))) {
 		return NULL;
 	}
 	struct bool_binary_tree *t = (struct bool_binary_tree*) at;
@@ -53,13 +57,12 @@ struct bool_binary_tree *bool_binary_tree_init(char *at, unsigned char order) {
 	return t;
 }
 
-void *at_depth(struct bool_binary_tree *t, size_t depth, struct bool_binary_tree_pos *pos) {
+void at_depth(struct bool_binary_tree *t, size_t depth, struct bool_binary_tree_pos *pos) {
 	pos->t = t;
 	pos->pos = 1;
 	while (depth && left_child(pos)) {
 		depth--;
 	}
-	return pos;
 }
 
 _Bool left_child(struct bool_binary_tree_pos *pos) {
