@@ -1646,6 +1646,10 @@ void test_bitset_range() {
 					assert(!bitset_test(buf, k));
 				}
 			}
+			bitset_clear_range(buf, j, i);
+			for (size_t k = j; k < i; k++) {
+				assert(!bitset_test(buf, k));
+			}
 		}
 	}
 }
