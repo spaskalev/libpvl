@@ -51,6 +51,7 @@ size_t pvl_sizeof(size_t span_count) {
 }
 
 static size_t pvl_next_span(struct pvl *pvl, size_t from, struct pvl_span *span);
+static void pvl_clear_span(struct pvl *pvl, struct pvl_span span);
 static void pvl_stat(struct pvl *pvl, size_t *spans, size_t *size);
 static int pvl_load(struct pvl *pvl);
 static int pvl_save(struct pvl *pvl);
@@ -205,6 +206,12 @@ static size_t pvl_next_span(struct pvl *pvl, size_t from, struct pvl_span *span)
 	return pvl->span_count;
 }
 
+static void pvl_clear_span(struct pvl *pvl, struct pvl_span span) {
+	size_t from_pos = span.index;
+	size_t to_pos = span.index+span.length;
+	bitset_clear_range(pvl->spans, from_pos, to_pos);
+}
+
 static void pvl_stat(struct pvl *pvl, size_t *spans, size_t *size) {
 	*spans = 0;
 	*size = 0;
@@ -272,18 +279,19 @@ static int pvl_save(struct pvl *pvl) {
 		}
 	}
 
-	/* Apply to mirror */
-	if (pvl->mirror) {
-		next = 0;
-		while((next = pvl_next_span(pvl, next, &span))) {
-			if (span.marked) {
-				memcpy(pvl->mirror + span.index, pvl->main + span.index, span.length);
-			}
+	next = 0;
+	while((next = pvl_next_span(pvl, next, &span))) {
+		if (! span.marked) {
+			continue;
 		}
+		/* Apply to mirror */
+		if (pvl->mirror) {
+			memcpy(pvl->mirror + span.index, pvl->main + span.index, span.length);
+		}
+		/* Clear the span */
+		pvl_clear_span(pvl, span);
 	}
 
-	/* Clear the spans */
-	memset(pvl->spans, 0, (bitset_size(pvl->span_count) * sizeof(char)));;
 	return 0;
 }
 

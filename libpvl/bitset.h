@@ -14,6 +14,8 @@ size_t bitset_size(size_t elements);
 
 void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_pos);
 
+void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to_pos);
+
 void bitset_set(unsigned char *bitset, size_t pos);
 
 void bitset_clear(unsigned char *bitset, size_t pos);
