@@ -1743,6 +1743,15 @@ void test_bbt_basic() {
 	assert(bbt_pos_right_adjacent(bbt, &pos) == 0);
 }
 
+void test_bbm_init_misalignment() {
+	start_test;
+    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)+1];
+    alignas(max_align_t) unsigned char data_buf[4096];
+    // Ensure wrong alignment (max_align_t+1)
+    struct bbm *bbm = bbm_init(bbm_buf+1, data_buf, 4096);
+    assert (bbm == NULL);
+}
+
 int main() {
     {
         test_init_misalignment();
@@ -1833,5 +1842,9 @@ int main() {
 		test_bbt_init_invalid_order();
 
 		test_bbt_basic();
+	}
+
+	{
+		test_bbm_init_misalignment();
 	}
 }
