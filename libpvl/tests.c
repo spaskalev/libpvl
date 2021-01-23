@@ -1743,13 +1743,57 @@ void test_bbt_basic() {
 	assert(bbt_pos_right_adjacent(bbt, &pos) == 0);
 }
 
-void test_bbm_init_misalignment() {
+void test_bbm_init_null() {
 	start_test;
     alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)+1];
+    alignas(max_align_t) unsigned char data_buf[4096+1];
+    {
+		struct bbm *bbm = bbm_init(NULL, data_buf, 4096);
+		assert (bbm == NULL);
+	}
+    {
+		struct bbm *bbm = bbm_init(bbm_buf, NULL, 4096);
+		assert (bbm == NULL);
+	}
+}
+
+void test_bbm_misalignment() {
+	start_test;
+    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)+1];
+    alignas(max_align_t) unsigned char data_buf[4096+1];
+    {
+		struct bbm *bbm = bbm_init(bbm_buf+1, data_buf, 4096);
+		assert (bbm == NULL);
+	}
+    {
+		struct bbm *bbm = bbm_init(bbm_buf, data_buf+1, 4096);
+		assert (bbm == NULL);
+	}
+}
+
+void test_bbm_invalid_datasize() {
+	start_test;
+    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
     alignas(max_align_t) unsigned char data_buf[4096];
-    // Ensure wrong alignment (max_align_t+1)
-    struct bbm *bbm = bbm_init(bbm_buf+1, data_buf, 4096);
-    assert (bbm == NULL);
+    {
+		assert(bbm_sizeof(0) == 0);
+		assert(bbm_sizeof(BBM_ALIGN-1) == 0);
+		assert(bbm_sizeof(BBM_ALIGN+1) == 0);
+	}
+    {
+		struct bbm *bbm = bbm_init(bbm_buf, data_buf, 0);
+		assert (bbm == NULL);
+	}
+}
+
+void test_bbm_init() {
+	start_test;
+    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
+    alignas(max_align_t) unsigned char data_buf[4096];
+    {
+		struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
+		assert (bbm != NULL);
+	}
 }
 
 int main() {
@@ -1845,6 +1889,10 @@ int main() {
 	}
 
 	{
-		test_bbm_init_misalignment();
+		test_bbm_init_null();
+		test_bbm_misalignment();
+		test_bbm_invalid_datasize();
+
+		test_bbm_init();
 	}
 }
