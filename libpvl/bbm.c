@@ -68,3 +68,13 @@ static size_t bbt_order_for_memory(size_t memory_size) {
 	}
 	return bbt_order;
 }
+
+void *bbm_malloc(struct bbm *bbm, size_t size) {
+	if (bbm == NULL) {
+		return NULL;
+	}
+	if (size == 0) {
+		return NULL;
+	}
+	return NULL;
+}
