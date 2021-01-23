@@ -60,10 +60,6 @@ struct bbm *bbm_init(unsigned char *at, unsigned char *main, size_t memory_size)
 	return bbm;
 }
 
-void *bbm_malloc(struct bbm *bbm, size_t size);
-
-void bbm_free(struct bbm *bbm, void *ptr);
-
 static size_t bbt_order_for_memory(size_t memory_size) {
 	size_t blocks = memory_size / BBM_ALIGN;
 	size_t bbt_order = 1;

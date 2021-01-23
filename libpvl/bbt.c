@@ -60,6 +60,9 @@ bbt_pos bbt_left_pos_at_depth(struct bbt *t, size_t depth) {
 }
 
 _Bool bbt_pos_left_child(struct bbt *t, bbt_pos *pos) {
+	if (*pos == 0) {
+		return 0; /* invalid pos */
+	}
 	if (bbt_pos_depth(t, pos) + 1 == t->order) {
 		return 0;
 	}
@@ -68,6 +71,9 @@ _Bool bbt_pos_left_child(struct bbt *t, bbt_pos *pos) {
 }
 
 _Bool bbt_pos_right_child(struct bbt *t, bbt_pos *pos) {
+	if (*pos == 0) {
+		return 0; /* invalid pos */
+	}
 	if (bbt_pos_depth(t, pos) + 1 == t->order) {
 		return 0;
 	}
@@ -78,7 +84,7 @@ _Bool bbt_pos_right_child(struct bbt *t, bbt_pos *pos) {
 _Bool bbt_pos_left_adjacent(struct bbt *t, bbt_pos *pos) {
 	(void)(t); /* to keep a unified and future-proof api */
 	if (*pos == 0) {
-		return 0; /* invalid pod */
+		return 0; /* invalid pos */
 	}
 	if (*pos == 1) {
 		return 0; /* root node has no adjacent nodes */
@@ -93,7 +99,7 @@ _Bool bbt_pos_left_adjacent(struct bbt *t, bbt_pos *pos) {
 _Bool bbt_pos_right_adjacent(struct bbt *t, bbt_pos *pos) {
 	(void)(t); /* to keep a unified and future-proof api */
 	if (*pos == 0) {
-		return 0; /* invalid pod */
+		return 0; /* invalid pos */
 	}
 	if (*pos == 1) {
 		return 0; /* root node has no adjacent nodes */
@@ -107,6 +113,9 @@ _Bool bbt_pos_right_adjacent(struct bbt *t, bbt_pos *pos) {
 
 _Bool bbt_pos_parent(struct bbt *t, bbt_pos *pos) {
 	(void)(t); /* to keep a unified and future-proof api */
+	if (*pos == 0) {
+		return 0; /* invalid pos */
+	}
 	size_t parent = *pos / 2;
 	if ((parent != *pos) && parent != 0) {
 		*pos = parent;
@@ -115,23 +124,38 @@ _Bool bbt_pos_parent(struct bbt *t, bbt_pos *pos) {
 	return 0;
 }
 
-void bbt_pos_set(struct bbt *t, bbt_pos *pos) {
+void bbt_pos_set(struct bbt *t, const bbt_pos *pos) {
+	if (*pos == 0) {
+		return; /* invalid pos */
+	}
 	bitset_set(t->bits, *pos);
 }
 
-void bbt_pos_clear(struct bbt *t, bbt_pos *pos) {
+void bbt_pos_clear(struct bbt *t, const bbt_pos *pos) {
+	if (*pos == 0) {
+		return; /* invalid pos */
+	}
 	bitset_clear(t->bits, *pos);
 }
 
-void bbt_pos_flip(struct bbt *t, bbt_pos *pos) {
+void bbt_pos_flip(struct bbt *t, const bbt_pos *pos) {
+	if (*pos == 0) {
+		return; /* invalid pos */
+	}
 	bitset_flip(t->bits, *pos);
 }
 
-_Bool bbt_pos_test(struct bbt *t, bbt_pos *pos) {
+_Bool bbt_pos_test(struct bbt *t, const bbt_pos *pos) {
+	if (*pos == 0) {
+		return 0; /* invalid pos */
+	}
 	return bitset_test(t->bits, *pos);
 }
 
-size_t bbt_pos_depth(struct bbt *t, bbt_pos *pos) {
+size_t bbt_pos_depth(struct bbt *t, const bbt_pos *pos) {
+	if (*pos == 0) {
+		return 0; /* invalid pos */
+	}
 	(void)(t); /* to keep a unified and future-proof api */
 	return highest_bit_set(*pos);
 }

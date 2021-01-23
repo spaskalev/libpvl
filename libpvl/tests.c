@@ -1745,6 +1745,19 @@ void test_bbt_basic() {
 	pos = bbt_left_pos_at_depth(bbt, 0);
 	assert(bbt_pos_left_adjacent(bbt, &pos) == 0);
 	assert(bbt_pos_right_adjacent(bbt, &pos) == 0);
+
+	pos = 0; /* invalid pos */
+	assert(bbt_pos_left_child(bbt, &pos) == 0);
+	assert(bbt_pos_right_child(bbt, &pos) == 0);
+	assert(bbt_pos_left_adjacent(bbt, &pos) == 0);
+	assert(bbt_pos_right_adjacent(bbt, &pos) == 0);
+	assert(bbt_pos_parent(bbt, &pos) == 0);
+	assert(bbt_pos_test(bbt, &pos) == 0);
+	assert(bbt_pos_depth(bbt, &pos) == 0);
+	/* coverage for void functions */
+	bbt_pos_set(bbt, &pos);
+	bbt_pos_clear(bbt, &pos);
+	bbt_pos_flip(bbt, &pos);
 }
 
 void test_bbm_init_null() {
