@@ -36,16 +36,16 @@ _Bool bbt_pos_right_adjacent(struct bbt *t, bbt_pos *pos);
 _Bool bbt_pos_parent(struct bbt *t, bbt_pos *pos);
 
 /* Set the value at the indicated position */
-void bbt_pos_set(struct bbt *t, bbt_pos *pos);
+void bbt_pos_set(struct bbt *t, const bbt_pos *pos);
 
 /* Clear the value at the indicated  position */
-void bbt_pos_clear(struct bbt *t, bbt_pos *pos);
+void bbt_pos_clear(struct bbt *t, const bbt_pos *pos);
 
 /* Flips the value at the indicated  position */
-void bbt_pos_flip(struct bbt *t, bbt_pos *pos);
+void bbt_pos_flip(struct bbt *t, const bbt_pos *pos);
 
 /* Returns the value at the indicated  position */
-_Bool bbt_pos_test(struct bbt *t, bbt_pos *pos);
+_Bool bbt_pos_test(struct bbt *t, const bbt_pos *pos);
 
 /* Returns the depth at the indicated  position */
-size_t bbt_pos_depth(struct bbt *t, bbt_pos *pos);
+size_t bbt_pos_depth(struct bbt *t, const bbt_pos *pos);

@@ -22,9 +22,9 @@ void bitset_set_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
     size_t to_bucket = to_pos / CHAR_BIT;
     size_t to_index = to_pos % CHAR_BIT;
     if (from_bucket == to_bucket) {
-		bitset[from_bucket] |= (unsigned char)(cbits[to_index - from_index]) << from_index;
+		bitset[from_bucket] |= (size_t)(cbits[to_index - from_index]) << from_index;
 	} else {
-		bitset[from_bucket] |= (unsigned char)(cbits[7u - from_index]) << from_index;
+		bitset[from_bucket] |= (size_t)(cbits[7u - from_index]) << from_index;
 		for (size_t i = from_bucket+1; i < to_bucket; i++) {
 			bitset[i] = 255u;
 		}
@@ -39,13 +39,13 @@ void bitset_clear_range(unsigned char *bitset, size_t from_pos, size_t to_pos) {
     size_t to_bucket = to_pos / CHAR_BIT;
     size_t to_index = to_pos % CHAR_BIT;
     if (from_bucket == to_bucket) {
-		bitset[from_bucket] &= ~(unsigned char)(cbits[to_index - from_index]) << from_index;
+		bitset[from_bucket] &= ~(size_t)(cbits[to_index - from_index]) << from_index;
 	} else {
-		bitset[from_bucket] &= ~(unsigned char)(cbits[7u - from_index]) << from_index;
+		bitset[from_bucket] &= ~(size_t)(cbits[7u - from_index]) << from_index;
 		for (size_t i = from_bucket+1; i < to_bucket; i++) {
 			bitset[i] = 0u;
 		}
-		bitset[to_bucket] &= ~cbits[to_index];
+		bitset[to_bucket] &= ~(size_t)cbits[to_index];
 	}
 }
 
