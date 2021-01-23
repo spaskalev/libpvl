@@ -45,11 +45,9 @@ void bitset_clear(unsigned char *bitset, size_t pos) {
 }
 
 void bitset_flip(unsigned char *bitset, size_t pos) {
-	if (bitset_test(bitset, pos)) {
-		bitset_clear(bitset, pos);
-	} else {
-		bitset_set(bitset, pos);
-	}
+    size_t bucket = pos / CHAR_BIT;
+    size_t index = pos % CHAR_BIT;
+    bitset[bucket] ^= (1u << index);
 }
 
 _Bool bitset_test(const unsigned char *bitset, size_t pos) {
