@@ -111,6 +111,19 @@ _Bool bbt_pos_right_adjacent(struct bbt *t, bbt_pos *pos) {
 	return 1;
 }
 
+_Bool bbt_pos_sibling(struct bbt *t, bbt_pos *pos) {
+	(void)(t); /* to keep a unified and future-proof api */
+	if (*pos == 0) {
+		return 0; /* invalid pos */
+	}
+	if (*pos == 1) {
+		return 0; /* root node has no parent node */
+	}
+	/* Flip first bit to get the sibling pos */
+	*pos ^= 1u;
+	return 1;
+}
+
 _Bool bbt_pos_parent(struct bbt *t, bbt_pos *pos) {
 	(void)(t); /* to keep a unified and future-proof api */
 	if (*pos == 0) {
@@ -121,7 +134,7 @@ _Bool bbt_pos_parent(struct bbt *t, bbt_pos *pos) {
 		*pos = parent;
 		return 1;
 	}
-	return 0;
+	return 0; /* root node has no parent node */
 }
 
 void bbt_pos_set(struct bbt *t, const bbt_pos *pos) {
