@@ -21,7 +21,7 @@ struct bbm {
 };
 
 static size_t bbt_order_for_memory(size_t memory_size);
-static size_t depth_for_size(size_t request_size);
+static size_t depth_for_size(struct bbm *bbm, size_t request_size);
 static size_t size_for_depth(struct bbm *bbm, size_t depth);
 bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t depth);
 
@@ -82,7 +82,7 @@ void *bbm_malloc(struct bbm *bbm, size_t requested_size) {
 	if (requested_size > bbm->memory_size) {
 		return NULL;
 	}
-	size_t target_depth = depth_for_size(requested_size);
+	size_t target_depth = depth_for_size(bbm, requested_size);
 	bbt_pos pos = bbt_left_pos_at_depth(bbm->bbt, 0);
 	bbt_pos slot = search_free_slot(bbm->bbt, pos, target_depth);
 	if (slot == 0) {
@@ -102,11 +102,12 @@ void *bbm_malloc(struct bbm *bbm, size_t requested_size) {
 	return (bbm->main + addr);
 }
 
-static size_t depth_for_size(size_t requested_size) {
+static size_t depth_for_size(struct bbm *bbm, size_t requested_size) {
 	size_t depth = 0;
-	while (requested_size > BBM_ALIGN) {
+	size_t memory_size = bbm->memory_size;
+	while ((memory_size / requested_size) >> 1) {
 		depth++;
-		requested_size >>= 1;
+		memory_size >>= 1;
 	}
 	return depth;
 }
