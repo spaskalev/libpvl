@@ -1854,6 +1854,9 @@ void test_bbm_malloc_basic_01() {
 	assert (bbm != NULL);
 	assert(bbm_malloc(bbm, 4096) == data_buf);
 	assert(bbm_malloc(bbm, 4096) == NULL);
+	bbm_free(bbm, data_buf);
+	assert(bbm_malloc(bbm, 4096) == data_buf);
+	assert(bbm_malloc(bbm, 4096) == NULL);
 	assert(1);
 }
 
@@ -1866,6 +1869,11 @@ void test_bbm_malloc_basic_02() {
 	assert(bbm_malloc(bbm, 2048) == data_buf);
 	assert(bbm_malloc(bbm, 2048) == data_buf+2048);
 	assert(bbm_malloc(bbm, 2048) == NULL);
+	bbm_free(bbm, data_buf);
+	bbm_free(bbm, data_buf+2048);
+	assert(bbm_malloc(bbm, 2048) == data_buf);
+	assert(bbm_malloc(bbm, 2048) == data_buf+2048);
+	assert(bbm_malloc(bbm, 2048) == NULL);
 	assert(1);
 }
 
@@ -1875,6 +1883,13 @@ void test_bbm_malloc_basic_03() {
     alignas(max_align_t) unsigned char data_buf[4096];
 	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
 	assert (bbm != NULL);
+	assert(bbm_malloc(bbm, 1024) == data_buf);
+	assert(bbm_malloc(bbm, 2048) == data_buf+2048);
+	assert(bbm_malloc(bbm, 1024) == data_buf+1024);
+	assert(bbm_malloc(bbm, 1024) == NULL);
+	bbm_free(bbm, data_buf+1024);
+	bbm_free(bbm, data_buf+2048);
+	bbm_free(bbm, data_buf);
 	assert(bbm_malloc(bbm, 1024) == data_buf);
 	assert(bbm_malloc(bbm, 2048) == data_buf+2048);
 	assert(bbm_malloc(bbm, 1024) == data_buf+1024);
