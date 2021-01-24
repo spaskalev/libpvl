@@ -32,6 +32,9 @@ _Bool bbt_pos_left_adjacent(struct bbt *t, bbt_pos *pos);
 /* Navigates to the right adjacent node. Returns false if there is no right adjacent node. */
 _Bool bbt_pos_right_adjacent(struct bbt *t, bbt_pos *pos);
 
+/* Navigates to the sibling node. Returns false if this is the root node. */
+_Bool bbt_pos_sibling(struct bbt *t, bbt_pos *pos);
+
 /* Navigates to the patern node. Returns false if this is the root node. */
 _Bool bbt_pos_parent(struct bbt *t, bbt_pos *pos);
 
