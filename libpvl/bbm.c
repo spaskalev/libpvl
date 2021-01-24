@@ -84,8 +84,8 @@ void *bbm_malloc(struct bbm *bbm, size_t requested_size) {
 	}
 	size_t target_depth = depth_for_size(bbm, requested_size);
 	bbt_pos pos = bbt_left_pos_at_depth(bbm->bbt, 0);
-	bbt_pos slot = search_free_slot(bbm->bbt, pos, target_depth);
-	if (slot == 0) {
+	pos = search_free_slot(bbm->bbt, pos, target_depth);
+	if (pos == 0) {
 		return NULL;
 	}
 	/* Find the return address */
