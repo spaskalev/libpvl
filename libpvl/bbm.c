@@ -21,7 +21,7 @@ struct bbm {
 };
 
 static size_t bbt_order_for_memory(size_t memory_size);
-static size_t depth_for_size(struct bbm *bbm, size_t request_size);
+static size_t depth_for_size(struct bbm *bbm, size_t requested_size);
 static size_t size_for_depth(struct bbm *bbm, size_t depth);
 bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t depth);
 
@@ -141,15 +141,14 @@ void bbm_free(struct bbm *bbm, void *ptr) {
 		}
 		bbt_pos_parent(bbm->bbt, &pos);
 	}
-	return;
 }
 
 static size_t depth_for_size(struct bbm *bbm, size_t requested_size) {
 	size_t depth = 0;
 	size_t memory_size = bbm->memory_size;
-	while ((memory_size / requested_size) >> 1) {
+	while ((memory_size / requested_size) >> 1u) {
 		depth++;
-		memory_size >>= 1;
+		memory_size >>= 1u;
 	}
 	return depth;
 }
@@ -161,10 +160,6 @@ static size_t size_for_depth(struct bbm *bbm, size_t depth) {
 
 bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t target_depth) {
 	size_t current_depth = bbt_pos_depth(bbt, &pos);
-	if (current_depth > target_depth) {
-		return 0;
-	}
-
 	if (bbt_pos_test(bbt, &pos)) {
 		/* branch is allocated, return */
 		if (current_depth == target_depth) {
@@ -172,10 +167,8 @@ bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t target_depth) {
 		}
 		bbt_pos left_child = pos;
 		bbt_pos right_child = pos;
-		if (!(bbt_pos_left_child(bbt, &left_child) && bbt_pos_right_child(bbt, &right_child))) {
-			/* no more children */
-			return 0;
-		}
+		bbt_pos_left_child(bbt, &left_child);
+		bbt_pos_right_child(bbt, &right_child);
 		if (bbt_pos_test(bbt, &left_child) || bbt_pos_test(bbt, &right_child)) {
 			bbt_pos result = 0;
 			result = search_free_slot(bbt, left_child, target_depth);
@@ -183,19 +176,18 @@ bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t target_depth) {
 				result = search_free_slot(bbt, right_child, target_depth);
 			}
 			return result;
-		} else {
-			/* both children are unset which means this node is already allocated */
-			return 0;
 		}
-	} else {
-		/* branch in free, terminate if target depth is reached */
-		if (current_depth == target_depth) {
-			return pos;
-		}
-		bbt_pos next = pos;
-		bbt_pos_left_child(bbt, &next);
-		return search_free_slot(bbt, next, target_depth);
+		/* both children are unset which means this node is already allocated */
+		return 0;
 	}
+
+	/* branch in free, terminate if target depth is reached */
+	if (current_depth == target_depth) {
+		return pos;
+	}
+	bbt_pos next = pos;
+	bbt_pos_left_child(bbt, &next);
+	return search_free_slot(bbt, next, target_depth);
 
 	return 0;
 }
