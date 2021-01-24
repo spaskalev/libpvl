@@ -23,7 +23,7 @@ struct bbm {
 static size_t bbt_order_for_memory(size_t memory_size);
 static size_t depth_for_size(struct bbm *bbm, size_t requested_size);
 static size_t size_for_depth(struct bbm *bbm, size_t depth);
-bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t depth);
+bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t target_depth);
 
 size_t bbm_sizeof(size_t memory_size) {
 	if ((memory_size % BBM_ALIGN) != 0) {

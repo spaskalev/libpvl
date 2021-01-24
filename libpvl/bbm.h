@@ -20,7 +20,7 @@ size_t bbm_sizeof(size_t memory_size);
 struct bbm *bbm_init(unsigned char *at, unsigned char *main, size_t memory_size);
 
 /* Use the specified bbm to allocate memory. See malloc. */
-void *bbm_malloc(struct bbm *bbm, size_t size);
+void *bbm_malloc(struct bbm *bbm, size_t requested_size);
 
 /* Use the specified bbm to free memory. See free. */
 void bbm_free(struct bbm *bbm, void *ptr);
