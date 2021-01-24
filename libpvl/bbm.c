@@ -21,6 +21,9 @@ struct bbm {
 };
 
 static size_t bbt_order_for_memory(size_t memory_size);
+static size_t depth_for_size(size_t request_size);
+static size_t size_for_depth(struct bbm *bbm, size_t depth);
+bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t depth);
 
 size_t bbm_sizeof(size_t memory_size) {
 	if ((memory_size % BBM_ALIGN) != 0) {
@@ -69,12 +72,87 @@ static size_t bbt_order_for_memory(size_t memory_size) {
 	return bbt_order;
 }
 
-void *bbm_malloc(struct bbm *bbm, size_t size) {
+void *bbm_malloc(struct bbm *bbm, size_t requested_size) {
 	if (bbm == NULL) {
 		return NULL;
 	}
-	if (size == 0) {
+	if (requested_size == 0) {
 		return NULL;
 	}
-	return NULL;
+	if (requested_size > bbm->memory_size) {
+		return NULL;
+	}
+	size_t target_depth = depth_for_size(requested_size);
+	bbt_pos pos = bbt_left_pos_at_depth(bbm->bbt, 0);
+	bbt_pos slot = search_free_slot(bbm->bbt, pos, target_depth);
+	if (slot == 0) {
+		return NULL;
+	}
+	/* Find the return address */
+	size_t block_size = size_for_depth(bbm, target_depth);
+	size_t addr = block_size * bbt_pos_index(bbm->bbt, &pos);
+	/* Mark as allocated */
+	bbt_pos_set(bbm->bbt, &pos);
+	while (bbt_pos_parent(bbm->bbt, &pos)) {
+		if (bbt_pos_test(bbm->bbt, &pos)) {
+			break;
+		}
+		bbt_pos_set(bbm->bbt, &pos);
+	}
+	return (bbm->main + addr);
+}
+
+static size_t depth_for_size(size_t requested_size) {
+	size_t depth = 0;
+	while (requested_size > BBM_ALIGN) {
+		depth++;
+		requested_size >>= 1;
+	}
+	return depth;
+}
+
+static size_t size_for_depth(struct bbm *bbm, size_t depth) {
+	size_t result = bbm->memory_size >> depth;
+	return result;
+}
+
+bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t target_depth) {
+	size_t current_depth = bbt_pos_depth(bbt, &pos);
+	if (current_depth > target_depth) {
+		return 0;
+	}
+
+	if (bbt_pos_test(bbt, &pos)) {
+		/* branch is allocated, return */
+		if (current_depth == target_depth) {
+			return 0;
+		}
+		bbt_pos left_child = pos;
+		bbt_pos right_child = pos;
+		if (!(bbt_pos_left_child(bbt, &left_child) && bbt_pos_right_child(bbt, &right_child))) {
+			/* no more children */
+			return 0;
+		}
+		if (bbt_pos_test(bbt, &left_child) || bbt_pos_test(bbt, &right_child)) {
+			bbt_pos result = 0;
+			result = search_free_slot(bbt, left_child, target_depth);
+			if (result == 0) {
+				result = search_free_slot(bbt, right_child, target_depth);
+			}
+			return result;
+		} else {
+			/* both children are unset which means this node is already allocated */
+			return 0;
+		}
+	} else {
+		/* branch in free, terminate if target depth is reached */
+		if (current_depth == target_depth) {
+			return pos;
+		}
+		bbt_pos next = pos;
+		bbt_pos_left_child(bbt, &next);
+		return search_free_slot(bbt, next, target_depth);
+	}
+
+	return 0;
 }
