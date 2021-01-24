@@ -102,6 +102,48 @@ void *bbm_malloc(struct bbm *bbm, size_t requested_size) {
 	return (bbm->main + addr);
 }
 
+void bbm_free(struct bbm *bbm, void *ptr) {
+	if (bbm == NULL) {
+		return;
+	}
+	if (ptr == NULL) {
+		return;
+	}
+	unsigned char *dst = (unsigned char *)ptr;
+	if ((dst < bbm->main) || (dst > (bbm->main + bbm->memory_size))) {
+		return;
+	}
+
+	/* Find the deepest pos tracking this address */
+	ptrdiff_t offset = dst - bbm->main;
+	size_t index = offset / BBM_ALIGN;
+	bbt_pos pos = bbt_left_pos_at_depth(bbm->bbt, bbm->bbt_order-1);
+	while (index > 0) {
+		bbt_pos_right_adjacent(bbm->bbt, &pos);
+		index--;
+	}
+
+	/* Clear bits upward */
+	while (!bbt_pos_test(bbm->bbt, &pos)) {
+		if (!bbt_pos_parent(bbm->bbt, &pos)) {
+			/* root reached and clear, nothing to unset */
+			return;
+		}
+	}
+	while (1) {
+		bbt_pos_clear(bbm->bbt, &pos);
+		if (!bbt_pos_sibling(bbm->bbt, &pos)) {
+			return;
+		}
+		if (bbt_pos_test(bbm->bbt, &pos)) {
+			/* sibling allocated, can return */
+			return;
+		}
+		bbt_pos_parent(bbm->bbt, &pos);
+	}
+	return;
+}
+
 static size_t depth_for_size(struct bbm *bbm, size_t requested_size) {
 	size_t depth = 0;
 	size_t memory_size = bbm->memory_size;
