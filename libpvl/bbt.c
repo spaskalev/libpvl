@@ -153,11 +153,23 @@ _Bool bbt_pos_test(struct bbt *t, const bbt_pos *pos) {
 }
 
 size_t bbt_pos_depth(struct bbt *t, const bbt_pos *pos) {
+	(void)(t); /* to keep a unified and future-proof api */
 	if (*pos == 0) {
 		return 0; /* invalid pos */
 	}
-	(void)(t); /* to keep a unified and future-proof api */
 	return highest_bit_set(*pos);
+}
+
+size_t bbt_pos_index(struct bbt *t, const bbt_pos *pos) {
+	(void)(t); /* to keep a unified and future-proof api */
+	if (*pos == 0) {
+		return 0; /* invalid pos */
+	}
+	/* Clear out the highest bit, this gives us the index
+	 * in a row of sibling nodes */
+	size_t mask = 1u << highest_bit_set(*pos);
+	size_t result = *pos & ~mask;
+	return result;
 }
 
 static size_t highest_bit_set(size_t value) {
