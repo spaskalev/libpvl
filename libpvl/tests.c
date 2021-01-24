@@ -1688,6 +1688,7 @@ void test_bbt_basic() {
 		assert (bbt_pos_depth(bbt, &pos) == i);
 	}
 	pos = bbt_left_pos_at_depth(bbt, 0);
+	assert(bbt_pos_index(bbt, &pos) == 0);
 
 	assert(bbt_pos_left_child(bbt, &pos) == 1);
 	assert(bbt_pos_depth(bbt, &pos) == 1);
@@ -1754,6 +1755,7 @@ void test_bbt_basic() {
 	assert(bbt_pos_parent(bbt, &pos) == 0);
 	assert(bbt_pos_test(bbt, &pos) == 0);
 	assert(bbt_pos_depth(bbt, &pos) == 0);
+	assert(bbt_pos_index(bbt, &pos) == 0);
 	/* coverage for void functions */
 	bbt_pos_set(bbt, &pos);
 	bbt_pos_clear(bbt, &pos);
