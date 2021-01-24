@@ -1827,6 +1827,15 @@ void test_bbm_malloc_zero() {
 	assert(bbm_malloc(bbm, 0) == NULL);
 }
 
+void test_bbm_malloc_larger() {
+	start_test;
+    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
+    alignas(max_align_t) unsigned char data_buf[4096];
+	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
+	assert (bbm != NULL);
+	assert(bbm_malloc(bbm, 8192) == NULL);
+}
+
 int main() {
     {
         test_init_misalignment();
@@ -1928,5 +1937,6 @@ int main() {
 
 		test_bbm_malloc_null();
 		test_bbm_malloc_zero();
+		test_bbm_malloc_larger();
 	}
 }
