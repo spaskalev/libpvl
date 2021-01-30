@@ -15,7 +15,6 @@
 
 struct bbt {
 	unsigned char order;
-	size_t elements_count;
 	unsigned char bits[];
 };
 
@@ -43,8 +42,8 @@ struct bbt *bbt_init(unsigned char *at, unsigned char order) {
 	}
 	struct bbt *t = (struct bbt*) at;
 	t->order = order;
-	t->elements_count = 1u << order;
-	memset(t->bits, 0, bitset_size(t->elements_count));
+	size_t elements_count = 1u << order;
+	memset(t->bits, 0, bitset_size(elements_count));
 	return t;
 }
 
