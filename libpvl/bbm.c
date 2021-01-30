@@ -90,14 +90,14 @@ void *bbm_malloc(struct bbm *bbm, size_t requested_size) {
 	}
 	/* Find the return address */
 	size_t block_size = size_for_depth(bbm, target_depth);
-	size_t addr = block_size * bbt_pos_index(bbm->bbt, &pos);
+	size_t addr = block_size * bbt_pos_index(bbm->bbt, pos);
 	/* Mark as allocated */
-	bbt_pos_set(bbm->bbt, &pos);
-	while (bbt_pos_parent(bbm->bbt, &pos)) {
-		if (bbt_pos_test(bbm->bbt, &pos)) {
+	bbt_pos_set(bbm->bbt, pos);
+	while ((pos = bbt_pos_parent(bbm->bbt, pos))) {
+		if (bbt_pos_test(bbm->bbt, pos)) {
 			break;
 		}
-		bbt_pos_set(bbm->bbt, &pos);
+		bbt_pos_set(bbm->bbt, pos);
 	}
 	return (bbm->main + addr);
 }
@@ -119,27 +119,27 @@ void bbm_free(struct bbm *bbm, void *ptr) {
 	size_t index = offset / BBM_ALIGN;
 	bbt_pos pos = bbt_left_pos_at_depth(bbm->bbt, bbm->bbt_order-1);
 	while (index > 0) {
-		bbt_pos_right_adjacent(bbm->bbt, &pos);
+		pos = bbt_pos_right_adjacent(bbm->bbt, pos);
 		index--;
 	}
 
 	/* Clear bits upward */
-	while (!bbt_pos_test(bbm->bbt, &pos)) {
-		if (!bbt_pos_parent(bbm->bbt, &pos)) {
+	while (!bbt_pos_test(bbm->bbt, pos)) {
+		if (!(pos = bbt_pos_parent(bbm->bbt, pos))) {
 			/* root reached and clear, nothing to unset */
 			return;
 		}
 	}
 	while (1) {
-		bbt_pos_clear(bbm->bbt, &pos);
-		if (!bbt_pos_sibling(bbm->bbt, &pos)) {
+		bbt_pos_clear(bbm->bbt, pos);
+		if (!(pos = bbt_pos_sibling(bbm->bbt, pos))) {
 			return;
 		}
-		if (bbt_pos_test(bbm->bbt, &pos)) {
+		if (bbt_pos_test(bbm->bbt, pos)) {
 			/* sibling allocated, can return */
 			return;
 		}
-		bbt_pos_parent(bbm->bbt, &pos);
+		pos = bbt_pos_parent(bbm->bbt, pos);
 	}
 }
 
@@ -159,17 +159,15 @@ static size_t size_for_depth(struct bbm *bbm, size_t depth) {
 }
 
 bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t target_depth) {
-	size_t current_depth = bbt_pos_depth(bbt, &pos);
-	if (bbt_pos_test(bbt, &pos)) {
+	size_t current_depth = bbt_pos_depth(bbt, pos);
+	if (bbt_pos_test(bbt, pos)) {
 		/* branch is allocated, return */
 		if (current_depth == target_depth) {
 			return 0;
 		}
-		bbt_pos left_child = pos;
-		bbt_pos right_child = pos;
-		bbt_pos_left_child(bbt, &left_child);
-		bbt_pos_right_child(bbt, &right_child);
-		if (bbt_pos_test(bbt, &left_child) || bbt_pos_test(bbt, &right_child)) {
+		bbt_pos left_child = bbt_pos_left_child(bbt, pos);
+		bbt_pos right_child = bbt_pos_right_child(bbt, pos);
+		if (bbt_pos_test(bbt, left_child) || bbt_pos_test(bbt, right_child)) {
 			bbt_pos result = 0;
 			result = search_free_slot(bbt, left_child, target_depth);
 			if (result == 0) {
@@ -185,14 +183,11 @@ bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t target_depth) {
 	if (current_depth == target_depth) {
 		return pos;
 	}
-	bbt_pos next = pos;
-	bbt_pos_left_child(bbt, &next);
+	bbt_pos next = bbt_pos_left_child(bbt, pos);
 	return search_free_slot(bbt, next, target_depth);
-
-	return 0;
 }
 
 void bbm_debug_print(struct bbm *bbm) {
 	bbt_pos pos = bbt_left_pos_at_depth(bbm->bbt, 0);
-	bbt_debug_pos_print(bbm->bbt, &pos);
+	bbt_debug_pos_print(bbm->bbt, pos);
 }

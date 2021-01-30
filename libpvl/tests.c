@@ -1660,6 +1660,7 @@ void test_bbt_init_misalignment() {
     // Ensure wrong alignment (max_align_t+1)
     struct bbt *bbt = bbt_init(buf+1, 1);
     assert (bbt == NULL);
+    assert(bbt_pos_valid(bbt, 1) == 0);
 }
 
 void test_bbt_sizeof_invalid_order() {
@@ -1681,93 +1682,94 @@ void test_bbt_basic() {
 	alignas(max_align_t) unsigned char buf[bbt_sizeof(bbt_order)];
 	struct bbt *bbt = bbt_init(buf, bbt_order);
 	assert(bbt != NULL);
+	assert(bbt_pos_valid(bbt, 256) == 0);
 	bbt_pos pos = 0;
 	for (size_t i = 0; i < 3; i++) {
 		pos = bbt_left_pos_at_depth(bbt, i);
 		assert (pos != 0);
-		assert (bbt_pos_depth(bbt, &pos) == i);
+		assert (bbt_pos_depth(bbt, pos) == i);
 	}
 	pos = bbt_left_pos_at_depth(bbt, 0);
-	assert(bbt_pos_index(bbt, &pos) == 0);
-	assert(bbt_pos_sibling(bbt, &pos) == 0);
-	assert(bbt_pos_parent(bbt, &pos) == 0);
+	assert(bbt_pos_index(bbt, pos) == 0);
+	assert(bbt_pos_sibling(bbt, pos) == 0);
+	assert(bbt_pos_parent(bbt, pos) == 0);
 
-	assert(bbt_pos_left_child(bbt, &pos) == 1);
-	assert(bbt_pos_sibling(bbt, &pos) == 1);
-	assert(bbt_pos_parent(bbt, &pos) == 1);
-	assert(bbt_pos_depth(bbt, &pos) == 0);
+	assert((pos = bbt_pos_left_child(bbt, pos)));
+	assert((pos = bbt_pos_sibling(bbt, pos)));
+	assert((pos = bbt_pos_parent(bbt, pos)));
+	assert(bbt_pos_depth(bbt, pos) == 0);
 
-	assert(bbt_pos_left_child(bbt, &pos) == 1);
-	assert(bbt_pos_depth(bbt, &pos) == 1);
-	assert(bbt_pos_parent(bbt, &pos) == 1);
-	assert(bbt_pos_depth(bbt, &pos) == 0);
+	assert((pos = bbt_pos_left_child(bbt, pos)));
+	assert(bbt_pos_depth(bbt, pos) == 1);
+	assert((pos = bbt_pos_parent(bbt, pos)));
+	assert(bbt_pos_depth(bbt, pos) == 0);
 
-	assert(bbt_pos_right_child(bbt, &pos) == 1);
-	assert(bbt_pos_depth(bbt, &pos) == 1);
-	assert(bbt_pos_parent(bbt, &pos) == 1);
-	assert(bbt_pos_depth(bbt, &pos) == 0);
+	assert((pos = bbt_pos_right_child(bbt, pos)));
+	assert(bbt_pos_depth(bbt, pos) == 1);
+	assert((pos = bbt_pos_parent(bbt, pos)));
+	assert(bbt_pos_depth(bbt, pos) == 0);
 
-	assert(bbt_pos_left_child(bbt, &pos) == 1);
-	assert(bbt_pos_right_adjacent(bbt, &pos) == 1);
-	assert(bbt_pos_depth(bbt, &pos) == 1);
-	assert(bbt_pos_parent(bbt, &pos) == 1);
-	assert(bbt_pos_depth(bbt, &pos) == 0);
+	assert((pos = bbt_pos_left_child(bbt, pos)));
+	assert((pos = bbt_pos_right_adjacent(bbt, pos)));
+	assert(bbt_pos_depth(bbt, pos) == 1);
+	assert((pos = bbt_pos_parent(bbt, pos)));
+	assert(bbt_pos_depth(bbt, pos) == 0);
 
-	assert(bbt_pos_right_child(bbt, &pos) == 1);
-	assert(bbt_pos_left_adjacent(bbt, &pos) == 1);
-	assert(bbt_pos_depth(bbt, &pos) == 1);
-	assert(bbt_pos_parent(bbt, &pos) == 1);
-	assert(bbt_pos_depth(bbt, &pos) == 0);
+	assert((pos = bbt_pos_right_child(bbt, pos)));
+	assert((pos = bbt_pos_left_adjacent(bbt, pos)));
+	assert(bbt_pos_depth(bbt, pos) == 1);
+	assert((pos = bbt_pos_parent(bbt, pos)));
+	assert(bbt_pos_depth(bbt, pos) == 0);
 
-	bbt_pos_set(bbt, &pos);
-	assert(bbt_pos_test(bbt, &pos) == 1);
-	bbt_pos_clear(bbt, &pos);
-	assert(bbt_pos_test(bbt, &pos) == 0);
-	bbt_pos_flip(bbt, &pos);
-	assert(bbt_pos_test(bbt, &pos) == 1);
-	bbt_pos_flip(bbt, &pos);
-	assert(bbt_pos_test(bbt, &pos) == 0);
-
-	pos = bbt_left_pos_at_depth(bbt, 0);
-	assert(bbt_pos_left_child(bbt, &pos) == 1);
-	assert(bbt_pos_left_child(bbt, &pos) == 1);
-	assert(bbt_pos_left_child(bbt, &pos) == 0);
-	assert(bbt_pos_left_adjacent(bbt, &pos) == 0);
+	bbt_pos_set(bbt, pos);
+	assert(bbt_pos_test(bbt, pos) == 1);
+	bbt_pos_clear(bbt, pos);
+	assert(bbt_pos_test(bbt, pos) == 0);
+	bbt_pos_flip(bbt, pos);
+	assert(bbt_pos_test(bbt, pos) == 1);
+	bbt_pos_flip(bbt, pos);
+	assert(bbt_pos_test(bbt, pos) == 0);
 
 	pos = bbt_left_pos_at_depth(bbt, 0);
-	assert(bbt_pos_right_child(bbt, &pos) == 1);
-	assert(bbt_pos_right_child(bbt, &pos) == 1);
-	assert(bbt_pos_right_child(bbt, &pos) == 0);
-	assert(bbt_pos_right_adjacent(bbt, &pos) == 0);
+	assert((pos = bbt_pos_left_child(bbt, pos)));
+	assert((pos = bbt_pos_left_child(bbt, pos)));
+	assert(!bbt_pos_valid(bbt, bbt_pos_left_child(bbt, pos)));
+	assert(!bbt_pos_valid(bbt, bbt_pos_left_adjacent(bbt, pos)));
 
 	pos = bbt_left_pos_at_depth(bbt, 0);
-	assert(bbt_pos_right_child(bbt, &pos) == 1);
-	assert(bbt_pos_right_adjacent(bbt, &pos) == 0);
+	assert((pos = bbt_pos_right_child(bbt, pos)));
+	assert((pos = bbt_pos_right_child(bbt, pos)));
+	assert(!bbt_pos_valid(bbt, bbt_pos_right_child(bbt, pos)));
+	assert(!bbt_pos_valid(bbt, bbt_pos_right_adjacent(bbt, pos)));
 
 	pos = bbt_left_pos_at_depth(bbt, 0);
-	assert(bbt_pos_parent(bbt, &pos) == 0);
+	assert((pos = bbt_pos_right_child(bbt, pos)));
+	assert(!bbt_pos_valid(bbt, bbt_pos_right_adjacent(bbt, pos)));
+
+	pos = bbt_left_pos_at_depth(bbt, 0);
+	assert(!bbt_pos_valid(bbt, bbt_pos_parent(bbt, pos)));
 
 	pos = bbt_left_pos_at_depth(bbt, 3);
-	assert(bbt_pos_depth(bbt, &pos) == 0);
+	assert(!bbt_pos_valid(bbt, bbt_pos_depth(bbt, pos)));
 
 	pos = bbt_left_pos_at_depth(bbt, 0);
-	assert(bbt_pos_left_adjacent(bbt, &pos) == 0);
-	assert(bbt_pos_right_adjacent(bbt, &pos) == 0);
+	assert(!bbt_pos_valid(bbt, bbt_pos_left_adjacent(bbt, pos)));
+	assert(!bbt_pos_valid(bbt, bbt_pos_right_adjacent(bbt, pos)));
 
 	pos = 0; /* invalid pos */
-	assert(bbt_pos_left_child(bbt, &pos) == 0);
-	assert(bbt_pos_right_child(bbt, &pos) == 0);
-	assert(bbt_pos_left_adjacent(bbt, &pos) == 0);
-	assert(bbt_pos_right_adjacent(bbt, &pos) == 0);
-	assert(bbt_pos_sibling(bbt, &pos) == 0);
-	assert(bbt_pos_parent(bbt, &pos) == 0);
-	assert(bbt_pos_test(bbt, &pos) == 0);
-	assert(bbt_pos_depth(bbt, &pos) == 0);
-	assert(bbt_pos_index(bbt, &pos) == 0);
+	assert(bbt_pos_left_child(bbt, pos) == 0);
+	assert(bbt_pos_right_child(bbt, pos) == 0);
+	assert(bbt_pos_left_adjacent(bbt, pos) == 0);
+	assert(bbt_pos_right_adjacent(bbt, pos) == 0);
+	assert(bbt_pos_sibling(bbt, pos) == 0);
+	assert(bbt_pos_parent(bbt, pos) == 0);
+	assert(bbt_pos_test(bbt, pos) == 0);
+	assert(bbt_pos_depth(bbt, pos) == 0);
+	assert(bbt_pos_index(bbt, pos) == 0);
 	/* coverage for void functions */
-	bbt_pos_set(bbt, &pos);
-	bbt_pos_clear(bbt, &pos);
-	bbt_pos_flip(bbt, &pos);
+	bbt_pos_set(bbt, pos);
+	bbt_pos_clear(bbt, pos);
+	bbt_pos_flip(bbt, pos);
 }
 
 void test_bbm_init_null() {
@@ -1852,7 +1854,6 @@ void test_bbm_malloc_basic_01() {
     alignas(max_align_t) unsigned char data_buf[1024];
 	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 1024);
 	assert (bbm != NULL);
-	bbm_debug_print(bbm);
 	assert(bbm_malloc(bbm, 1024) == data_buf);
 	assert(bbm_malloc(bbm, 1024) == NULL);
 	bbm_free(bbm, data_buf);
@@ -1901,6 +1902,7 @@ void test_bbm_free_coverage() {
     alignas(max_align_t) unsigned char data_buf[4096];
 	struct bbm *bbm = bbm_init(bbm_buf, data_buf+1024, 1024);
 	assert (bbm != NULL);
+	bbm_debug_print(bbm);
 	bbm_free(NULL, NULL);
 	bbm_free(NULL, data_buf+1024);
 	bbm_free(bbm, NULL);

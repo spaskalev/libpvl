@@ -60,158 +60,167 @@ bbt_pos bbt_left_pos_at_depth(struct bbt *t, size_t depth) {
 		return 0;
 	}
 	bbt_pos pos = 1;
-	while (depth && bbt_pos_left_child(t, &pos)) {
+	while (depth && (pos = bbt_pos_left_child(t, pos))) {
 		depth--;
 	}
 	return pos;
 }
 
-_Bool bbt_pos_left_child(struct bbt *t, bbt_pos *pos) {
-	if (*pos == 0) {
+bbt_pos bbt_pos_left_child(struct bbt *t, bbt_pos pos) {
+	if (!bbt_pos_valid(t, pos)) {
 		return 0; /* invalid pos */
 	}
 	if (bbt_pos_depth(t, pos) + 1 == t->order) {
 		return 0;
 	}
-	*pos = 2 * *pos;
-	return 1;
+	pos = 2 * pos;
+	return pos;
 }
 
-_Bool bbt_pos_right_child(struct bbt *t, bbt_pos *pos) {
-	if (*pos == 0) {
+bbt_pos bbt_pos_right_child(struct bbt *t, bbt_pos pos) {
+	if (!bbt_pos_valid(t, pos)) {
 		return 0; /* invalid pos */
 	}
 	if (bbt_pos_depth(t, pos) + 1 == t->order) {
 		return 0;
 	}
-	*pos = (2 * *pos) + 1;
-	return 1;
+	pos = (2 * pos) + 1;
+	return pos;
 }
 
-_Bool bbt_pos_left_adjacent(struct bbt *t, bbt_pos *pos) {
+bbt_pos bbt_pos_left_adjacent(struct bbt *t, bbt_pos pos) {
 	(void)(t); /* to keep a unified and future-proof api */
-	if (*pos == 0) {
+	if (!bbt_pos_valid(t, pos)) {
 		return 0; /* invalid pos */
 	}
-	if (*pos == 1) {
+	if (pos == 1) {
 		return 0; /* root node has no adjacent nodes */
 	}
-	if (highest_bit_set(*pos) != highest_bit_set(*pos - 1)) {
+	if (highest_bit_set(pos) != highest_bit_set(pos - 1)) {
 		return 0;
 	}
-	*pos -= 1;
-	return 1;
+	pos -= 1;
+	return pos;
 }
 
-_Bool bbt_pos_right_adjacent(struct bbt *t, bbt_pos *pos) {
+bbt_pos bbt_pos_right_adjacent(struct bbt *t, bbt_pos pos) {
 	(void)(t); /* to keep a unified and future-proof api */
-	if (*pos == 0) {
+	if (!bbt_pos_valid(t, pos)) {
 		return 0; /* invalid pos */
 	}
-	if (*pos == 1) {
+	if (pos == 1) {
 		return 0; /* root node has no adjacent nodes */
 	}
-	if (highest_bit_set(*pos) != highest_bit_set(*pos + 1)) {
+	if (highest_bit_set(pos) != highest_bit_set(pos + 1)) {
 		return 0;
 	}
-	*pos += 1;
-	return 1;
+	pos += 1;
+	return pos;
 }
 
-_Bool bbt_pos_sibling(struct bbt *t, bbt_pos *pos) {
+bbt_pos bbt_pos_sibling(struct bbt *t, bbt_pos pos) {
 	(void)(t); /* to keep a unified and future-proof api */
-	if (*pos == 0) {
+	if (!bbt_pos_valid(t, pos)) {
 		return 0; /* invalid pos */
 	}
-	if (*pos == 1) {
-		return 0; /* root node has no parent node */
+	if (pos == 1) {
+		return 0; /* root node has no sibling node */
 	}
 	/* Flip first bit to get the sibling pos */
-	*pos ^= 1u;
-	return 1;
+	pos ^= 1u;
+	return pos;
 }
 
-_Bool bbt_pos_parent(struct bbt *t, bbt_pos *pos) {
+bbt_pos bbt_pos_parent(struct bbt *t, bbt_pos pos) {
 	(void)(t); /* to keep a unified and future-proof api */
-	if (*pos == 0) {
+	if (!bbt_pos_valid(t, pos)) {
 		return 0; /* invalid pos */
 	}
-	size_t parent = *pos / 2;
-	if ((parent != *pos) && parent != 0) {
-		*pos = parent;
-		return 1;
+	size_t parent = pos / 2;
+	if ((parent != pos) && parent != 0) {
+		return parent;
 	}
 	return 0; /* root node has no parent node */
 }
 
-void bbt_pos_set(struct bbt *t, const bbt_pos *pos) {
-	if (*pos == 0) {
-		return; /* invalid pos */
+_Bool bbt_pos_valid(struct bbt *t, bbt_pos pos) {
+	(void)(t); /* to keep a unified and future-proof api */
+	if (t == NULL) {
+		return 0;
 	}
-	bitset_set(t->bits, *pos);
+	if (pos == 0) {
+		return 0;
+	}
+	if (pos >= 1u << t->order) {
+		return 0;
+	}
+	return 1;
 }
 
-void bbt_pos_clear(struct bbt *t, const bbt_pos *pos) {
-	if (*pos == 0) {
+void bbt_pos_set(struct bbt *t, const bbt_pos pos) {
+	if (!bbt_pos_valid(t, pos)) {
 		return; /* invalid pos */
 	}
-	bitset_clear(t->bits, *pos);
+	bitset_set(t->bits, pos);
 }
 
-void bbt_pos_flip(struct bbt *t, const bbt_pos *pos) {
-	if (*pos == 0) {
+void bbt_pos_clear(struct bbt *t, const bbt_pos pos) {
+	if (!bbt_pos_valid(t, pos)) {
 		return; /* invalid pos */
 	}
-	bitset_flip(t->bits, *pos);
+	bitset_clear(t->bits, pos);
 }
 
-_Bool bbt_pos_test(struct bbt *t, const bbt_pos *pos) {
-	if (*pos == 0) {
+void bbt_pos_flip(struct bbt *t, const bbt_pos pos) {
+	if (!bbt_pos_valid(t, pos)) {
+		return; /* invalid pos */
+	}
+	bitset_flip(t->bits, pos);
+}
+
+_Bool bbt_pos_test(struct bbt *t, const bbt_pos pos) {
+	if (!bbt_pos_valid(t, pos)) {
 		return 0; /* invalid pos */
 	}
-	return bitset_test(t->bits, *pos);
+	return bitset_test(t->bits, pos);
 }
 
-size_t bbt_pos_depth(struct bbt *t, const bbt_pos *pos) {
+size_t bbt_pos_depth(struct bbt *t, const bbt_pos pos) {
 	(void)(t); /* to keep a unified and future-proof api */
-	if (*pos == 0) {
+	if (!bbt_pos_valid(t, pos)) {
 		return 0; /* invalid pos */
 	}
-	return highest_bit_set(*pos);
+	return highest_bit_set(pos);
 }
 
-size_t bbt_pos_index(struct bbt *t, const bbt_pos *pos) {
+size_t bbt_pos_index(struct bbt *t, const bbt_pos pos) {
 	(void)(t); /* to keep a unified and future-proof api */
-	if (*pos == 0) {
+	if (!bbt_pos_valid(t, pos)) {
 		return 0; /* invalid pos */
 	}
 	/* Clear out the highest bit, this gives us the index
 	 * in a row of sibling nodes */
-	size_t mask = 1u << highest_bit_set(*pos);
-	size_t result = *pos & ~mask;
+	size_t mask = 1u << highest_bit_set(pos);
+	size_t result = pos & ~mask;
 	return result;
 }
 
 void bbt_debug_pos_print_depth(struct bbt *t, const bbt_pos pos, size_t depth) {
+	if (!bbt_pos_valid(t, pos)) {
+		return; /* invalid pos */
+	}
 	if (depth != 0) {
 		for (size_t i = 0; i < depth-1; i++) {
 			printf("|   ");
 		}
 		printf("^---");
 	}
-	printf("(%zu): %d\n", (size_t) pos, bbt_pos_test(t, &pos));
-
-	bbt_pos child = pos;
-	if (bbt_pos_left_child(t, &child)) {
-		bbt_debug_pos_print_depth(t, child, depth+1);
-	}
-	child = pos;
-	if (bbt_pos_right_child(t, &child)) {
-		bbt_debug_pos_print_depth(t, child, depth+1);
-	}
+	printf("(%zu): %d\n", (size_t) pos, bbt_pos_test(t, pos));
+	bbt_debug_pos_print_depth(t, bbt_pos_left_child(t, pos), depth+1);
+	bbt_debug_pos_print_depth(t, bbt_pos_right_child(t, pos), depth+1);
 }
 
-void bbt_debug_pos_print(struct bbt *t, const bbt_pos *pos) {
+void bbt_debug_pos_print(struct bbt *t, const bbt_pos pos) {
 	size_t depth = 0;
-	bbt_debug_pos_print_depth(t, *pos, depth);
+	bbt_debug_pos_print_depth(t, pos, depth);
 }

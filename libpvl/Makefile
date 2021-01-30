@@ -25,7 +25,7 @@ check_coverage: tests.out
 	@echo -e "\nCode coverage check passed successfully\n"
 
 check_static:
-	clang-tidy -checks='*,-llvm-header-guard,-llvm-include-order' -warnings-as-errors='*' $(ALL_SRC) -- -DWARNING_DO_NOT_INCLUDE_PLV_C
+	clang-tidy -checks='*,-llvm-header-guard,-llvm-include-order,-bugprone-assert-side-effect' -warnings-as-errors='*' $(ALL_SRC) -- -DWARNING_DO_NOT_INCLUDE_PLV_C
 	cppcheck --error-exitcode=1 --quiet $(ALL_SRC)
 	@echo -e "\nStatic checks passed successfully\n"
 
