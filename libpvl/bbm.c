@@ -23,7 +23,6 @@ struct bbm {
 static size_t bbt_order_for_memory(size_t memory_size);
 static size_t depth_for_size(struct bbm *bbm, size_t requested_size);
 static size_t size_for_depth(struct bbm *bbm, size_t depth);
-bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t target_depth);
 
 size_t bbm_sizeof(size_t memory_size) {
 	if ((memory_size % BBM_ALIGN) != 0) {
@@ -83,14 +82,67 @@ void *bbm_malloc(struct bbm *bbm, size_t requested_size) {
 		return NULL;
 	}
 	size_t target_depth = depth_for_size(bbm, requested_size);
-	bbt_pos pos = bbt_left_pos_at_depth(bbm->bbt, 0);
-	pos = search_free_slot(bbm->bbt, pos, target_depth);
-	if (pos == 0) {
-		return NULL;
+	bbt_pos pos = bbt_left_pos_at_depth(bbm->bbt, target_depth);
+
+	while(1) {
+		if (bbt_pos_test(bbm->bbt, pos)) {
+			/* branch is busy, try the next one */
+			pos = bbt_pos_right_adjacent(bbm->bbt, pos);
+			if(!bbt_pos_valid(bbm->bbt, pos)) {
+				/* no more rightward positions */
+				return NULL;
+			}
+			continue;
+		}
+		/* else */
+		/*
+		 * go upwards until first set position OR root position
+		 *
+		 * If all is unset all the way to root we're good.
+		 * If a set position is found check previous sibling.
+		 */
+		bbt_pos previous;
+		bbt_pos parent = pos;
+		while (1) {
+			previous = parent;
+			parent = bbt_pos_parent(bbm->bbt, parent);
+			if (bbt_pos_valid(bbm->bbt, parent)) {
+				if (bbt_pos_test(bbm->bbt, parent)) {
+					/* parent is marked, check previous sibling */
+					if (bbt_pos_test(bbm->bbt, bbt_pos_sibling(bbm->bbt, previous))) {
+						/* sibling is marked, so the currently-found slot is good */
+						goto slot_found;
+					}
+					/* else */
+					/*
+					 * sibling is unmarked so this branch is used
+					 * skip the branch and descend back to target depth
+					 */
+					 pos = bbt_pos_right_adjacent(bbm->bbt, parent);
+					 if (!bbt_pos_valid(bbm->bbt, pos)) {
+						 /* no more branches remain */
+						 return NULL;
+				     }
+				     while (bbt_pos_depth(bbm->bbt, pos) != target_depth) {
+						 pos = bbt_pos_left_child(bbm->bbt, pos);
+					 }
+					 break;
+				}
+				/* else */
+				/* parent is free, go up */
+				continue;
+			}
+			/* else */
+			/* we've reached root - the current slot is good */
+			goto slot_found;
+		}
 	}
+
+	slot_found:;
 	/* Find the return address */
 	size_t block_size = size_for_depth(bbm, target_depth);
 	size_t addr = block_size * bbt_pos_index(bbm->bbt, pos);
+
 	/* Mark as allocated */
 	bbt_pos_set(bbm->bbt, pos);
 	while ((pos = bbt_pos_parent(bbm->bbt, pos))) {
@@ -156,35 +208,6 @@ static size_t depth_for_size(struct bbm *bbm, size_t requested_size) {
 static size_t size_for_depth(struct bbm *bbm, size_t depth) {
 	size_t result = bbm->memory_size >> depth;
 	return result;
-}
-
-bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t target_depth) {
-	size_t current_depth = bbt_pos_depth(bbt, pos);
-	if (bbt_pos_test(bbt, pos)) {
-		/* branch is allocated, return */
-		if (current_depth == target_depth) {
-			return 0;
-		}
-		bbt_pos left_child = bbt_pos_left_child(bbt, pos);
-		bbt_pos right_child = bbt_pos_right_child(bbt, pos);
-		if (bbt_pos_test(bbt, left_child) || bbt_pos_test(bbt, right_child)) {
-			bbt_pos result = 0;
-			result = search_free_slot(bbt, left_child, target_depth);
-			if (result == 0) {
-				result = search_free_slot(bbt, right_child, target_depth);
-			}
-			return result;
-		}
-		/* both children are unset which means this node is already allocated */
-		return 0;
-	}
-
-	/* branch in free, terminate if target depth is reached */
-	if (current_depth == target_depth) {
-		return pos;
-	}
-	bbt_pos next = bbt_pos_left_child(bbt, pos);
-	return search_free_slot(bbt, next, target_depth);
 }
 
 void bbm_debug_print(struct bbm *bbm) {
