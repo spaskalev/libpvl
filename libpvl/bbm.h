@@ -28,3 +28,5 @@ void bbm_free(struct bbm *bbm, void *ptr);
 /*void *calloc(size_t nmemb, size_t size);
 void *realloc(void *ptr, size_t size);
 void *reallocarray(void *ptr, size_t nmemb, size_t size);*/
+
+void bbm_debug_print(struct bbm *bbm);

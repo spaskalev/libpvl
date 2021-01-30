@@ -55,3 +55,6 @@ size_t bbt_pos_depth(struct bbt *t, const bbt_pos *pos);
 
 /* Returns the at-depth index of the indicated position */
 size_t bbt_pos_index(struct bbt *t, const bbt_pos *pos);
+
+/* Prints out the content of the tree starting from the indicated posision */
+void bbt_debug_pos_print(struct bbt *t, const bbt_pos *pos);

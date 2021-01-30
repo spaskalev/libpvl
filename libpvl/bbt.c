@@ -10,6 +10,7 @@
 
 #include <stdalign.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -19,6 +20,13 @@ struct bbt {
 };
 
 static size_t highest_bit_set(size_t value);
+static size_t highest_bit_set(size_t value) {
+	size_t pos = 0;
+	while ( value >>= 1u ) {
+		pos++;
+	}
+	return pos;
+}
 
 size_t bbt_sizeof(unsigned char order) {
 	if ((order == 0) || (order >= (sizeof(size_t) * CHAR_BIT))) {
@@ -184,10 +192,26 @@ size_t bbt_pos_index(struct bbt *t, const bbt_pos *pos) {
 	return result;
 }
 
-static size_t highest_bit_set(size_t value) {
-	size_t pos = 0;
-	while ( value >>= 1u ) {
-		pos++;
+void bbt_debug_pos_print_depth(struct bbt *t, const bbt_pos pos, size_t depth) {
+	if (depth != 0) {
+		for (size_t i = 0; i < depth-1; i++) {
+			printf("|   ");
+		}
+		printf("^---");
 	}
-	return pos;
+	printf("(%zu): %d\n", (size_t) pos, bbt_pos_test(t, &pos));
+
+	bbt_pos child = pos;
+	if (bbt_pos_left_child(t, &child)) {
+		bbt_debug_pos_print_depth(t, child, depth+1);
+	}
+	child = pos;
+	if (bbt_pos_right_child(t, &child)) {
+		bbt_debug_pos_print_depth(t, child, depth+1);
+	}
+}
+
+void bbt_debug_pos_print(struct bbt *t, const bbt_pos *pos) {
+	size_t depth = 0;
+	bbt_debug_pos_print_depth(t, *pos, depth);
 }

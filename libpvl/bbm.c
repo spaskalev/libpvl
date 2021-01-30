@@ -191,3 +191,8 @@ bbt_pos search_free_slot(struct bbt *bbt, bbt_pos pos, size_t target_depth) {
 
 	return 0;
 }
+
+void bbm_debug_print(struct bbm *bbm) {
+	bbt_pos pos = bbt_left_pos_at_depth(bbm->bbt, 0);
+	bbt_debug_pos_print(bbm->bbt, &pos);
+}
