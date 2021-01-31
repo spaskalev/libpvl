@@ -1674,6 +1674,7 @@ void test_bbt_init_invalid_order() {
 	alignas(max_align_t) unsigned char buf[1024];
 	assert(bbt_init(buf, 0) == NULL);
 	assert(bbt_init(buf, sizeof(size_t) * CHAR_BIT) == NULL);
+	assert(bbt_order(NULL) == 0);
 }
 
 void test_bbt_basic() {

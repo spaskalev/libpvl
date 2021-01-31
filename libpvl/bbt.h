@@ -17,6 +17,9 @@ size_t bbt_sizeof(unsigned char order);
 /* Initializes a boolean binary tree at the specified location. Keep order small. */
 struct bbt *bbt_init(unsigned char *at, unsigned char order);
 
+/* Returns the order of the specified boolean binary tree */
+unsigned char bbt_order(struct bbt *t);
+
 /* Returns a leftward position at the specified depth */
 bbt_pos bbt_left_pos_at_depth(struct bbt *t, size_t depth);
 

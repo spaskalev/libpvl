@@ -55,6 +55,13 @@ struct bbt *bbt_init(unsigned char *at, unsigned char order) {
 	return t;
 }
 
+unsigned char bbt_order(struct bbt *t) {
+	if (t == NULL) {
+		return 0;
+	}
+	return t->order;
+}
+
 bbt_pos bbt_left_pos_at_depth(struct bbt *t, size_t depth) {
 	if (depth >= t->order) {
 		return 0;

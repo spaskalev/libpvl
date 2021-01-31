@@ -15,7 +15,6 @@
 struct bbm {
 	unsigned char *main;
 	size_t memory_size;
-	size_t bbt_order;
 	alignas(max_align_t) unsigned char bbt_backing[];
 };
 
@@ -57,7 +56,6 @@ struct bbm *bbm_init(unsigned char *at, unsigned char *main, size_t memory_size)
 	bbm->main = main;
 	bbm->memory_size = memory_size;
 	bbt_init(bbm->bbt_backing, bbt_order);
-	bbm->bbt_order = bbt_order;
 	return bbm;
 }
 
@@ -170,7 +168,7 @@ void bbm_free(struct bbm *bbm, void *ptr) {
 	ptrdiff_t offset = dst - bbm->main;
 	size_t index = offset / BBM_ALIGN;
 	struct bbt* bbt = (struct bbt*) bbm->bbt_backing;
-	bbt_pos pos = bbt_left_pos_at_depth(bbt, bbm->bbt_order-1);
+	bbt_pos pos = bbt_left_pos_at_depth(bbt, bbt_order(bbt)-1);
 	while (index > 0) {
 		pos = bbt_pos_right_adjacent(bbt, pos);
 		index--;
