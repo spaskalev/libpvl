@@ -15,7 +15,6 @@
 struct bbm {
 	unsigned char *main;
 	size_t memory_size;
-	struct bbt *bbt;
 	size_t bbt_order;
 	alignas(max_align_t) unsigned char bbt_backing[];
 };
@@ -57,7 +56,7 @@ struct bbm *bbm_init(unsigned char *at, unsigned char *main, size_t memory_size)
 	struct bbm *bbm = (struct bbm *) at;
 	bbm->main = main;
 	bbm->memory_size = memory_size;
-	bbm->bbt = bbt_init(bbm->bbt_backing, bbt_order);
+	bbt_init(bbm->bbt_backing, bbt_order);
 	bbm->bbt_order = bbt_order;
 	return bbm;
 }
@@ -82,13 +81,14 @@ void *bbm_malloc(struct bbm *bbm, size_t requested_size) {
 		return NULL;
 	}
 	size_t target_depth = depth_for_size(bbm, requested_size);
-	bbt_pos pos = bbt_left_pos_at_depth(bbm->bbt, target_depth);
+	struct bbt* bbt = (struct bbt*) bbm->bbt_backing;
+	bbt_pos pos = bbt_left_pos_at_depth(bbt, target_depth);
 
 	while(1) {
-		if (bbt_pos_test(bbm->bbt, pos)) {
+		if (bbt_pos_test(bbt, pos)) {
 			/* branch is busy, try the next one */
-			pos = bbt_pos_right_adjacent(bbm->bbt, pos);
-			if(!bbt_pos_valid(bbm->bbt, pos)) {
+			pos = bbt_pos_right_adjacent(bbt, pos);
+			if(!bbt_pos_valid(bbt, pos)) {
 				/* no more rightward positions */
 				return NULL;
 			}
@@ -105,11 +105,11 @@ void *bbm_malloc(struct bbm *bbm, size_t requested_size) {
 		bbt_pos parent = pos;
 		while (1) {
 			previous = parent;
-			parent = bbt_pos_parent(bbm->bbt, parent);
-			if (bbt_pos_valid(bbm->bbt, parent)) {
-				if (bbt_pos_test(bbm->bbt, parent)) {
+			parent = bbt_pos_parent(bbt, parent);
+			if (bbt_pos_valid(bbt, parent)) {
+				if (bbt_pos_test(bbt, parent)) {
 					/* parent is marked, check previous sibling */
-					if (bbt_pos_test(bbm->bbt, bbt_pos_sibling(bbm->bbt, previous))) {
+					if (bbt_pos_test(bbt, bbt_pos_sibling(bbt, previous))) {
 						/* sibling is marked, so the currently-found slot is good */
 						goto slot_found;
 					}
@@ -118,13 +118,13 @@ void *bbm_malloc(struct bbm *bbm, size_t requested_size) {
 					 * sibling is unmarked so this branch is used
 					 * skip the branch and descend back to target depth
 					 */
-					 pos = bbt_pos_right_adjacent(bbm->bbt, parent);
-					 if (!bbt_pos_valid(bbm->bbt, pos)) {
+					 pos = bbt_pos_right_adjacent(bbt, parent);
+					 if (!bbt_pos_valid(bbt, pos)) {
 						 /* no more branches remain */
 						 return NULL;
 				     }
-				     while (bbt_pos_depth(bbm->bbt, pos) != target_depth) {
-						 pos = bbt_pos_left_child(bbm->bbt, pos);
+				     while (bbt_pos_depth(bbt, pos) != target_depth) {
+						 pos = bbt_pos_left_child(bbt, pos);
 					 }
 					 break;
 				}
@@ -141,15 +141,15 @@ void *bbm_malloc(struct bbm *bbm, size_t requested_size) {
 	slot_found:;
 	/* Find the return address */
 	size_t block_size = size_for_depth(bbm, target_depth);
-	size_t addr = block_size * bbt_pos_index(bbm->bbt, pos);
+	size_t addr = block_size * bbt_pos_index(bbt, pos);
 
 	/* Mark as allocated */
-	bbt_pos_set(bbm->bbt, pos);
-	while ((pos = bbt_pos_parent(bbm->bbt, pos))) {
-		if (bbt_pos_test(bbm->bbt, pos)) {
+	bbt_pos_set(bbt, pos);
+	while ((pos = bbt_pos_parent(bbt, pos))) {
+		if (bbt_pos_test(bbt, pos)) {
 			break;
 		}
-		bbt_pos_set(bbm->bbt, pos);
+		bbt_pos_set(bbt, pos);
 	}
 	return (bbm->main + addr);
 }
@@ -169,29 +169,30 @@ void bbm_free(struct bbm *bbm, void *ptr) {
 	/* Find the deepest pos tracking this address */
 	ptrdiff_t offset = dst - bbm->main;
 	size_t index = offset / BBM_ALIGN;
-	bbt_pos pos = bbt_left_pos_at_depth(bbm->bbt, bbm->bbt_order-1);
+	struct bbt* bbt = (struct bbt*) bbm->bbt_backing;
+	bbt_pos pos = bbt_left_pos_at_depth(bbt, bbm->bbt_order-1);
 	while (index > 0) {
-		pos = bbt_pos_right_adjacent(bbm->bbt, pos);
+		pos = bbt_pos_right_adjacent(bbt, pos);
 		index--;
 	}
 
 	/* Clear bits upward */
-	while (!bbt_pos_test(bbm->bbt, pos)) {
-		if (!(pos = bbt_pos_parent(bbm->bbt, pos))) {
+	while (!bbt_pos_test(bbt, pos)) {
+		if (!(pos = bbt_pos_parent(bbt, pos))) {
 			/* root reached and clear, nothing to unset */
 			return;
 		}
 	}
 	while (1) {
-		bbt_pos_clear(bbm->bbt, pos);
-		if (!(pos = bbt_pos_sibling(bbm->bbt, pos))) {
+		bbt_pos_clear(bbt, pos);
+		if (!(pos = bbt_pos_sibling(bbt, pos))) {
 			return;
 		}
-		if (bbt_pos_test(bbm->bbt, pos)) {
+		if (bbt_pos_test(bbt, pos)) {
 			/* sibling allocated, can return */
 			return;
 		}
-		pos = bbt_pos_parent(bbm->bbt, pos);
+		pos = bbt_pos_parent(bbt, pos);
 	}
 }
 
@@ -211,6 +212,7 @@ static size_t size_for_depth(struct bbm *bbm, size_t depth) {
 }
 
 void bbm_debug_print(struct bbm *bbm) {
-	bbt_pos pos = bbt_left_pos_at_depth(bbm->bbt, 0);
-	bbt_debug_pos_print(bbm->bbt, pos);
+	struct bbt* bbt = (struct bbt*) bbm->bbt_backing;
+	bbt_pos pos = bbt_left_pos_at_depth(bbt, 0);
+	bbt_debug_pos_print(bbt, pos);
 }
