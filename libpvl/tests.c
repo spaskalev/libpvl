@@ -1654,15 +1654,6 @@ void test_bitset_range() {
 	}
 }
 
-void test_bbt_init_misalignment() {
-	start_test;
-    alignas(max_align_t) unsigned char buf[bbt_sizeof(1)+1];
-    // Ensure wrong alignment (max_align_t+1)
-    struct bbt *bbt = bbt_init(buf+1, 1);
-    assert (bbt == NULL);
-    assert(bbt_pos_valid(bbt, 1) == 0);
-}
-
 void test_bbt_sizeof_invalid_order() {
 	start_test;
 	assert(bbt_sizeof(0) == 0);
@@ -1679,6 +1670,9 @@ void test_bbt_init_invalid_order() {
 
 void test_bbt_basic() {
 	start_test;
+
+	assert(bbt_pos_valid(NULL, 1) == 0);
+
 	size_t bbt_order = 3;
 	alignas(max_align_t) unsigned char buf[bbt_sizeof(bbt_order)];
 	struct bbt *bbt = bbt_init(buf, bbt_order);
@@ -2005,8 +1999,6 @@ int main() {
 	}
 
 	{
-		test_bbt_init_misalignment();
-
 		test_bbt_sizeof_invalid_order();
 		test_bbt_init_invalid_order();
 

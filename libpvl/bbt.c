@@ -41,10 +41,6 @@ size_t bbt_sizeof(unsigned char order) {
 }
 
 struct bbt *bbt_init(unsigned char *at, unsigned char order) {
-	size_t alignment = ((uintptr_t) at) % alignof(max_align_t);
-	if (alignment != 0) {
-		return NULL;
-	}
 	if ((order == 0) || (order >= (sizeof(size_t) * CHAR_BIT))) {
 		return NULL;
 	}
