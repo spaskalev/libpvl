@@ -1808,6 +1808,10 @@ void test_bbm_invalid_datasize() {
 		struct bbm *bbm = bbm_init(bbm_buf, data_buf, 0);
 		assert (bbm == NULL);
 	}
+	{
+		struct bbm *bbm = bbm_init(bbm_buf, data_buf, 32);
+		assert (bbm == NULL);
+	}
 }
 
 void test_bbm_init() {
