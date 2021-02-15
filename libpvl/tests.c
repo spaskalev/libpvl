@@ -12,7 +12,6 @@
 #include "tests.h"
 
 #include "bitset.h"
-#include "bbm.h"
 #include "bbt.h"
 
 #include "pvl.h"
@@ -1667,9 +1666,9 @@ void test_bbt_basic() {
 
 	assert(bbt_pos_valid(NULL, 1) == 0);
 
-	size_t bbt_order = 3;
-	alignas(max_align_t) unsigned char buf[bbt_sizeof(bbt_order)];
-	struct bbt *bbt = bbt_init(buf, bbt_order);
+	size_t order = 3;
+	alignas(max_align_t) unsigned char buf[bbt_sizeof(order)];
+	struct bbt *bbt = bbt_init(buf, order);
 	assert(bbt != NULL);
 	assert(bbt_pos_valid(bbt, 256) == 0);
 	bbt_pos pos = 0;
@@ -1759,158 +1758,8 @@ void test_bbt_basic() {
 	bbt_pos_set(bbt, pos);
 	bbt_pos_clear(bbt, pos);
 	bbt_pos_flip(bbt, pos);
-}
-
-void test_bbm_init_null() {
-	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)+1];
-    alignas(max_align_t) unsigned char data_buf[4096+1];
-    {
-		struct bbm *bbm = bbm_init(NULL, data_buf, 4096);
-		assert (bbm == NULL);
-	}
-    {
-		struct bbm *bbm = bbm_init(bbm_buf, NULL, 4096);
-		assert (bbm == NULL);
-	}
-}
-
-void test_bbm_misalignment() {
-	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)+1];
-    alignas(max_align_t) unsigned char data_buf[4096+1];
-    {
-		struct bbm *bbm = bbm_init(bbm_buf+1, data_buf, 4096);
-		assert (bbm == NULL);
-	}
-    {
-		struct bbm *bbm = bbm_init(bbm_buf, data_buf+1, 4096);
-		assert (bbm == NULL);
-	}
-}
-
-void test_bbm_invalid_datasize() {
-	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
-    {
-		assert(bbm_sizeof(0) == 0);
-		assert(bbm_sizeof(BBM_ALIGN-1) == 0);
-		assert(bbm_sizeof(BBM_ALIGN+1) == 0);
-	}
-    {
-		struct bbm *bbm = bbm_init(bbm_buf, data_buf, 0);
-		assert (bbm == NULL);
-	}
-	{
-		struct bbm *bbm = bbm_init(bbm_buf, data_buf, 32);
-		assert (bbm == NULL);
-	}
-}
-
-void test_bbm_init() {
-	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
-    {
-		struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
-		assert (bbm != NULL);
-	}
-}
-
-void test_bbm_malloc_null() {
-	start_test;
-	assert(bbm_malloc(NULL, 1024) == NULL);
-}
-
-void test_bbm_malloc_zero() {
-	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
-	assert (bbm != NULL);
-	assert(bbm_malloc(bbm, 0) == NULL);
-}
-
-void test_bbm_malloc_larger() {
-	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
-	assert (bbm != NULL);
-	assert(bbm_malloc(bbm, 8192) == NULL);
-}
-
-void test_bbm_malloc_basic_01() {
-	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(1024)];
-    alignas(max_align_t) unsigned char data_buf[1024];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 1024);
-	assert (bbm != NULL);
-	assert(bbm_malloc(bbm, 1024) == data_buf);
-	assert(bbm_malloc(bbm, 1024) == NULL);
-	bbm_free(bbm, data_buf);
-	assert(bbm_malloc(bbm, 1024) == data_buf);
-	assert(bbm_malloc(bbm, 1024) == NULL);
-}
-
-void test_bbm_malloc_basic_02() {
-	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
-	assert (bbm != NULL);
-	assert(bbm_malloc(bbm, 2048) == data_buf);
-	assert(bbm_malloc(bbm, 2048) == data_buf+2048);
-	assert(bbm_malloc(bbm, 2048) == NULL);
-	bbm_free(bbm, data_buf);
-	bbm_free(bbm, data_buf+2048);
-	assert(bbm_malloc(bbm, 2048) == data_buf);
-	assert(bbm_malloc(bbm, 2048) == data_buf+2048);
-	assert(bbm_malloc(bbm, 2048) == NULL);
-}
-
-void test_bbm_malloc_basic_03() {
-	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
-	assert (bbm != NULL);
-	assert(bbm_malloc(bbm, 1024) == data_buf);
-	assert(bbm_malloc(bbm, 2048) == data_buf+2048);
-	assert(bbm_malloc(bbm, 1024) == data_buf+1024);
-	assert(bbm_malloc(bbm, 1024) == NULL);
-	bbm_free(bbm, data_buf+1024);
-	bbm_free(bbm, data_buf+2048);
-	bbm_free(bbm, data_buf);
-	assert(bbm_malloc(bbm, 1024) == data_buf);
-	assert(bbm_malloc(bbm, 2048) == data_buf+2048);
-	assert(bbm_malloc(bbm, 1024) == data_buf+1024);
-	assert(bbm_malloc(bbm, 1024) == NULL);
-}
-
-void test_bbm_malloc_basic_04() {
-	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf, 4096);
-	assert (bbm != NULL);
-	assert(bbm_malloc(bbm, 64) == data_buf);
-	assert(bbm_malloc(bbm, 32) == data_buf+64);
-}
-
-void test_bbm_free_coverage() {
-	start_test;
-    alignas(max_align_t) unsigned char bbm_buf[bbm_sizeof(4096)];
-    alignas(max_align_t) unsigned char data_buf[4096];
-	struct bbm *bbm = bbm_init(bbm_buf, data_buf+1024, 1024);
-	assert (bbm != NULL);
-	bbm_debug_print(bbm);
-	bbm_free(NULL, NULL);
-	bbm_free(NULL, data_buf+1024);
-	bbm_free(bbm, NULL);
-	bbm_free(bbm, data_buf);
-	bbm_free(bbm, data_buf+2048);
+	bbt_debug_pos_print(bbt, 1);
+	bbt_order(bbt);
 }
 
 int main() {
@@ -2001,24 +1850,5 @@ int main() {
 		test_bbt_init_invalid_order();
 
 		test_bbt_basic();
-	}
-
-	{
-		test_bbm_init_null();
-		test_bbm_misalignment();
-		test_bbm_invalid_datasize();
-
-		test_bbm_init();
-
-		test_bbm_malloc_null();
-		test_bbm_malloc_zero();
-		test_bbm_malloc_larger();
-
-		test_bbm_malloc_basic_01();
-		test_bbm_malloc_basic_02();
-		test_bbm_malloc_basic_03();
-		test_bbm_malloc_basic_04();
-
-		test_bbm_free_coverage();
 	}
 }
