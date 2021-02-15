@@ -9,13 +9,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "tests.h"
+
+#include "bitset.h"
 #include "bbm.h"
 #include "bbt.h"
 
 #include "pvl.h"
 
 #define pvl_header_size (2*sizeof(size_t))
-#define start_test printf("Running test: %s in %s:%d\n", __func__, __FILE__, __LINE__);
 
 void test_init_misalignment() {
 	start_test;
@@ -365,14 +367,6 @@ void test_init_leak_no_mirror() {
     // call empty cb, ensure line coverage
     noop_leak_cb(NULL, NULL, 0);
 }
-
-/*
- * Define the guard to test implementation details
- */
-#ifndef WARNING_DO_NOT_INCLUDE_PLV_C
-#define WARNING_DO_NOT_INCLUDE_PLV_C
-#endif
-#include "pvl.c"
 
 typedef struct {
     int    return_int;

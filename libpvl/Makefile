@@ -1,62 +1,56 @@
 #
-# Copyright 2020-2021 Stanislav Paskalev <spaskalev@protonmail.com>
+# Copyright 2021 Stanislav Paskalev <spaskalev@protonmail.com>
 #
 
+#
+# Disable default implicit rules
+#
 MAKEFLAGS += --no-builtin-rules
-
 .SUFFIXES:
 
 export SHELL = /bin/bash
 
 CC=clang
 AR=ar
-CFLAGS=-DWARNING_DO_NOT_INCLUDE_PLV_C -g -fstrict-aliasing -fstack-protector-all -pedantic -Wall -Wextra -Werror -Wfatal-errors --coverage
+CFLAGS=-g -fstrict-aliasing -fstack-protector-all -pedantic -Wall -Wextra -Werror -Wfatal-errors --coverage
 LLVM_COV=$(shell compgen -c | grep llvm-cov | sort | head -n 1)
 ALL_SRC=$(wildcard *.c *.h)
+COV_SRC=$(subst journal.h,.static,$(subst journal.c,.static,$(ALL_SRC)))
+C_SRC=$(wildcard *.c)
+STATIC=$(subst .c,.static,$(C_SRC))
+OBJECTS=$(subst .c,.o,$(C_SRC))
 
-test: check_coverage check_static
-
-check_coverage: tests.out
+tests.out: $(OBJECTS) $(STATIC)
+	$(CC) $(CFLAGS) $(OBJECTS) -o $@
 	rm -f *.gcda
-	./tests.out
-	$(LLVM_COV) gcov -b $(ALL_SRC) | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
+	./$@
+	$(LLVM_COV) gcov -b $(COV_SRC) | paste -s -d ',' | sed -e 's/,,/,\n/' | cut -d ',' -f 1,2,3
 	! grep  '#####:' *.gcov
 	! grep -E '^branch\s*[0-9]? never executed$$' *.gcov
-	@echo -e "\nCode coverage check passed successfully\n"
 
-check_static:
-	clang-tidy -checks='*,-llvm-header-guard,-llvm-include-order,-bugprone-assert-side-effect' -warnings-as-errors='*' $(ALL_SRC) -- -DWARNING_DO_NOT_INCLUDE_PLV_C
-	cppcheck --error-exitcode=1 --quiet $(ALL_SRC)
-	@echo -e "\nStatic checks passed successfully\n"
+define DEP =
+$$(shell $(CC) -MM -MG $(1))
+	$(CC) $(CFLAGS) -c $(1) -o $$@
+endef
 
-tests.out: tests.c libpvl.a bitset.a bbt.a bbm.a
-	$(CC) -static $(CFLAGS) tests.c libpvl.a bitset.a bbt.a bbm.a -o tests.out
+$(foreach src,$(wildcard *.c),$(eval $(call DEP,$(src))))
 
-libpvl.o: pvl.c pvl.h
-	$(CC) $(CFLAGS) -c pvl.c -o $@
+%.static_clang_tidy:  %.c %.h
+	clang-tidy -checks='*,-llvm-header-guard,-llvm-include-order,-bugprone-assert-side-effect' -warnings-as-errors='*' $^ --
 
-libpvl.a: libpvl.o
-	$(AR) rcs $@ libpvl.o
+%.static_ccpcheck: %.c %.h
+	cppcheck --error-exitcode=1 --quiet $^
 
-bitset.o: bitset.h bitset.c
-	$(CC) $(CFLAGS) -c bitset.c -o $@
-
-bitset.a: bitset.o
-	$(AR) rcs $@ bitset.o
-
-bbt.o: bbt.h bbt.c
-	$(CC) $(CFLAGS) -c bbt.c -o $@
-
-bbt.a: bbt.o
-	$(AR) rcs $@ bbt.o
-
-bbm.o: bbm.h bbm.c
-	$(CC) $(CFLAGS) -c bbm.c -o $@
-
-bbm.a: bbm.o
-	$(AR) rcs $@ bbm.o
+%.static: %.static_clang_tidy %.static_ccpcheck
+	touch $@
 
 clean:
-	rm -f *.a *.o *.gcda *.gcno *.gcov tests.out
+	rm -f *.a *.o *.gcda *.gcno *.gcov *.static tests.out
 
-.PHONY: clean test check_coverage check_static
+# Mark clean as phony
+.PHONY: clean
+
+# Do not remove any intermediate files
+.SECONDARY:
+
+.PRECIOUS: tests.out

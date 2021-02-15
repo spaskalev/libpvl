@@ -6,10 +6,6 @@
  * libpvl - a system prevalence library (implementation)
  */
 
-#ifndef WARNING_DO_NOT_INCLUDE_PLV_C
-#error "Do not include pvl.c. Use the header and link with object code."
-#endif
-
 #include <limits.h>
 #include <stdalign.h>
 #include <stddef.h>
