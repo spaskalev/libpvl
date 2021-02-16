@@ -20,7 +20,10 @@ C_SRC=$(wildcard *.c)
 STATIC=$(subst .c,.static,$(C_SRC))
 OBJECTS=$(subst .c,.o,$(C_SRC))
 
-tests.out: $(OBJECTS) $(STATIC)
+test: tests.out $(STATIC)
+	@echo "Tests completed successfully"
+
+tests.out: $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) -o $@
 	rm -f *.gcda
 	./$@
@@ -37,7 +40,6 @@ $$(shell bash -c "$(CC) -MM -MG $(1) | tr -d '\\\\' | xargs ")
 	$(CC) $(CFLAGS) -c $(1) -o $$@
 endef
 
-
 $(foreach src,$(wildcard *.c),$(eval $(call DEP,$(src))))
 
 %.static_clang_tidy:  %.c %.h
@@ -53,7 +55,7 @@ clean:
 	rm -f *.a *.o *.gcda *.gcno *.gcov *.static tests.out
 
 # Mark clean as phony
-.PHONY: clean
+.PHONY: clean test
 
 # Do not remove any intermediate files
 .SECONDARY:
