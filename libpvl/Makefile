@@ -31,12 +31,8 @@ tests.out: $(OBJECTS)
 	! grep  '#####:' *.gcov
 	! grep -E '^branch\s*[0-9]? never executed$$' *.gcov
 
-# The tr .. | xargs contraption bellow comes as a result of both
-# gcc/cland respecting some maximum line width and putting extra
-# dependencies on a new line using \ to indicate a line continuation.
-# Make in turn messes this up via its shell handling.
 define DEP =
-$$(shell bash -c "$(CC) -MM -MG $(1) | tr -d '\\\\' | xargs ")
+$$(shell $(CC) -MM -MG $(1))
 	$(CC) $(CFLAGS) -c $(1) -o $$@
 endef
 
